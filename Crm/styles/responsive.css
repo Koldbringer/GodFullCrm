@@ -1,0 +1,155 @@
+/* Responsive utilities */
+
+/* Hide on mobile */
+.hide-on-mobile {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .hide-on-mobile {
+    display: initial;
+  }
+}
+
+/* Hide on desktop */
+.hide-on-desktop {
+  display: initial;
+}
+
+@media (min-width: 640px) {
+  .hide-on-desktop {
+    display: none;
+  }
+}
+
+/* Responsive typography */
+.responsive-text-xs {
+  font-size: 0.75rem;
+}
+
+.responsive-text-sm {
+  font-size: 0.875rem;
+}
+
+.responsive-text-base {
+  font-size: 1rem;
+}
+
+.responsive-text-lg {
+  font-size: 1.125rem;
+}
+
+.responsive-text-xl {
+  font-size: 1.25rem;
+}
+
+.responsive-text-2xl {
+  font-size: 1.5rem;
+}
+
+.responsive-text-3xl {
+  font-size: 1.875rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-xs {
+    font-size: 0.75rem;
+  }
+  
+  .responsive-text-sm {
+    font-size: 0.875rem;
+  }
+  
+  .responsive-text-base {
+    font-size: 1rem;
+  }
+  
+  .responsive-text-lg {
+    font-size: 1.125rem;
+  }
+  
+  .responsive-text-xl {
+    font-size: 1.25rem;
+  }
+  
+  .responsive-text-2xl {
+    font-size: 1.5rem;
+  }
+  
+  .responsive-text-3xl {
+    font-size: 1.875rem;
+  }
+}
+
+/* Responsive spacing */
+.responsive-p-0 {
+  padding: 0;
+}
+
+.responsive-p-1 {
+  padding: 0.25rem;
+}
+
+.responsive-p-2 {
+  padding: 0.5rem;
+}
+
+.responsive-p-4 {
+  padding: 0.75rem;
+}
+
+.responsive-p-6 {
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-p-0 {
+    padding: 0;
+  }
+  
+  .responsive-p-1 {
+    padding: 0.25rem;
+  }
+  
+  .responsive-p-2 {
+    padding: 0.5rem;
+  }
+  
+  .responsive-p-4 {
+    padding: 1rem;
+  }
+  
+  .responsive-p-6 {
+    padding: 1.5rem;
+  }
+}
+
+/* Accessibility focus styles */
+.focus-visible:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 8px;
+  z-index: 100;
+  transition: top 0.2s;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* High contrast mode support */
+@media (forced-colors: active) {
+  .high-contrast-outline {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+}

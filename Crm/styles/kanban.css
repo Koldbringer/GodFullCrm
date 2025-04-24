@@ -1,0 +1,16 @@
+.draggable-item {
+  transition: opacity 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.draggable-item.is-dragging {
+  opacity: 0.8;
+  z-index: 10;
+}
+
+/* Styles for react-beautiful-dnd */
+.react-beautiful-dnd-draggable {
+  /* This will be applied via className */
+  transition: transform 0.2s;
+}

@@ -1,0 +1,10 @@
+# Tavily MCP integration for Windsurf
+# Add this to your windsurfrules to enable Tavily MCP tools
+
+[[tool]]
+name = "tavily-mcp"
+description = "Access Tavily AI search and knowledge tools via MCP. Requires TAVILY_API_KEY in your .env.local."
+# Optionally, you can specify endpoints or routes if needed
+# endpoints = ["/api/tavily"]
+
+# The API key is loaded from the .env.local file

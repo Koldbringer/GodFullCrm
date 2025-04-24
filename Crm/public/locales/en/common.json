@@ -1,0 +1,20 @@
+{
+  "app_name": "GodLike CRM",
+  "navigation": {
+    "greeting": "Hello, User"
+  },
+  "accessibility": {
+    "toggle_dark_mode": "Toggle dark mode",
+    "select_language": "Select language",
+    "toggle_sidebar": "Toggle sidebar"
+  },
+  "status": {
+    "open": "Open",
+    "in_progress": "In Progress",
+    "scheduled": "Scheduled",
+    "closed": "Closed"
+  },
+  "tickets": {
+    "status": "Status"
+  }
+}
