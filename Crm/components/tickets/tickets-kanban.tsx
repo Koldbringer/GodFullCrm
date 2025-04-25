@@ -24,87 +24,15 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getTickets, updateTicket } from "@/lib/api"
-import { supabase } from "@/lib/supabase"
+import { updateTicket } from "@/lib/api"
+import { createClient } from "@/lib/supabase"
+import { fallbackTicketsData } from "./tickets-server"
 
-// Przykładowe dane zgłoszeń na wypadek błędu API
-const fallbackTicketsData = [
-  {
-    id: "TKT-001",
-    title: "Awaria klimatyzacji w biurze",
-    status: "open",
-    priority: "high",
-    created_at: "2023-10-15T10:30:00Z",
-    updated_at: "2023-10-15T10:30:00Z",
-    customer: {
-      id: "c1",
-      name: "Firma ABC",
-    },
-    site: {
-      id: "s1",
-      name: "Biuro główne",
-    },
-    device: {
-      id: "d1",
-      type: "Klimatyzator",
-      model: "Samsung WindFree",
-    },
-    technician: {
-      id: "t1",
-      name: "Jan Kowalski",
-    },
-    scheduled_date: "2023-10-17T09:00:00Z",
-  },
-  {
-    id: "TKT-002",
-    title: "Przegląd okresowy systemu wentylacji",
-    status: "scheduled",
-    priority: "medium",
-    created_at: "2023-10-14T14:45:00Z",
-    updated_at: "2023-10-14T14:45:00Z",
-    customer: {
-      id: "c2",
-      name: "Restauracja XYZ",
-    },
-    site: {
-      id: "s2",
-      name: "Sala główna",
-    },
-    device: {
-      id: "d2",
-      type: "System wentylacji",
-      model: "Daikin VRV IV",
-    },
-    technician: {
-      id: "t2",
-      name: "Anna Nowak",
-    },
-    scheduled_date: "2023-10-20T11:00:00Z",
-  },
-  {
-    id: "TKT-003",
-    title: "Montaż nowej pompy ciepła",
-    status: "in_progress",
-    priority: "medium",
-    created_at: "2023-10-10T09:15:00Z",
-    updated_at: "2023-10-10T09:15:00Z",
-    customer: {
-      id: "c3",
-      name: "Jan Nowak",
-    },
-    site: {
-      id: "s3",
-      name: "Dom jednorodzinny",
-    },
-    device: {
-      id: "d3",
-      type: "Pompa ciepła",
-      model: "Viessmann Vitocal 200-S",
-    },
-    technician: null,
-    scheduled_date: "2023-10-16T10:00:00Z",
-  }
-]
+interface TicketsKanbanProps {
+  initialTickets?: any[]
+}
+
+// Przykładowe dane zgłoszeń są teraz importowane z tickets-server.tsx
 
 // Mapowanie statusów z bazy danych na statusy w UI
 const statusMapping = {
@@ -124,9 +52,9 @@ const reverseStatusMapping = {
 
 type Ticket = any
 
-export function TicketsKanban() {
-  const [tickets, setTickets] = useState<Ticket[]>([])
-  const [loading, setLoading] = useState(true)
+export function TicketsKanban({ initialTickets = [] }: TicketsKanbanProps) {
+  const [tickets, setTickets] = useState<Ticket[]>(initialTickets.length > 0 ? initialTickets : fallbackTicketsData)
+  const [loading, setLoading] = useState(false)
   const [updatingTicket, setUpdatingTicket] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [ticketsByStatus, setTicketsByStatus] = useState<Record<string, Ticket[]>>(() => ({
@@ -136,22 +64,13 @@ export function TicketsKanban() {
     closed: [],
   }))
 
-  // Pobieranie danych z API
+  // Inicjalizacja danych
   useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const data = await getTickets()
-        setTickets(data)
-      } catch (error) {
-        console.error('Error fetching tickets:', error)
-        setTickets(fallbackTicketsData)
-        toast.error("Błąd podczas pobierania zgłoszeń")
-      } finally {
-        setLoading(false)
-      }
-    }
+    // Ustawienie danych początkowych
+    setTickets(initialTickets.length > 0 ? initialTickets : fallbackTicketsData)
 
-    fetchTickets()
+    // Create a Supabase client instance
+    const supabase = createClient()
 
     // Subskrypcja na zmiany w tabeli tickets
     const ticketsSubscription = supabase

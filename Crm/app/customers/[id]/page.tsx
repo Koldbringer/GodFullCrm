@@ -37,7 +37,7 @@ import { CustomerNotes } from "@/components/customers/customer-notes"
 import { CustomerSites } from "@/components/customers/customer-sites"
 import { CustomerFiles } from "@/components/customers/customer-files"
 import { NotificationCenter } from "@/components/notifications/notification-center"
-import { getCustomerById } from "@/lib/api"
+import { createServerClient } from "@/lib/supabase"
 import { EditCustomerForm } from "@/components/customers/edit-customer-form"
 
 export const metadata: Metadata = {
@@ -86,8 +86,74 @@ const fallbackCustomerData = {
 
 async function getCustomer(id: string) {
   try {
-    const customer = await getCustomerById(id, true)
-    return customer
+    // Użyj klienta serwerowego do pobierania danych
+    const supabase = await createServerClient()
+
+    console.log(`Fetching customer data for ID: ${id}`)
+
+    // Wykonaj zapytanie do bazy danych tylko z istniejącymi relacjami
+    // Sprawdzamy, które tabele istnieją w bazie danych
+    const { data, error } = await supabase
+      .from('customers')
+      .select(`
+        *,
+        sites(id, name, street, city, zip_code, type, status)
+      `)
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      console.error(`Error fetching customer with id ${id}:`, error)
+      return null
+    }
+
+    // Pobierz dodatkowe dane, jeśli są dostępne
+    let serviceOrders = []
+    let invoices = []
+
+    // Próba pobrania zleceń serwisowych
+    try {
+      const { data: ordersData } = await supabase
+        .from('service_orders')
+        .select('id, title, status, scheduled_date, priority')
+        .eq('customer_id', id)
+
+      if (ordersData) {
+        serviceOrders = ordersData
+      }
+    } catch (e) {
+      console.log('Tabela service_orders nie istnieje lub brak relacji')
+    }
+
+    // Próba pobrania faktur
+    try {
+      const { data: invoicesData } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, issue_date, due_date, total_amount, status')
+        .eq('customer_id', id)
+
+      if (invoicesData) {
+        invoices = invoicesData
+      }
+    } catch (e) {
+      console.log('Tabela invoices nie istnieje lub brak relacji')
+    }
+
+    // Dodaj dodatkowe pola, jeśli nie istnieją
+    const enhancedCustomer = {
+      ...data,
+      sites: data.sites || [],
+      service_orders: serviceOrders,
+      invoices: invoices,
+      total_devices: data.sites?.reduce((acc, site) => acc + (site.devices?.length || 0), 0) || 0,
+      total_service_orders: serviceOrders.length,
+      total_invoices: invoices.length,
+      total_spent: invoices.reduce((acc, invoice) => acc + (invoice.total_amount || 0), 0) || 0,
+      payment_status: invoices.some(inv => inv.status === 'Zaległa') ? 'Zaległy' : 'Terminowy'
+    }
+
+    console.log(`Fetched customer data: ${enhancedCustomer.name}`)
+    return enhancedCustomer
   } catch (error) {
     console.error(`Error fetching customer with id ${id}:`, error)
     return null
@@ -95,7 +161,9 @@ async function getCustomer(id: string) {
 }
 
 export default async function CustomerDetailsPage({ params }: { params: { id: string } }) {
-  const customerId = params.id
+  // Używamy await przed dostępem do właściwości params
+  const resolvedParams = await params
+  const customerId = resolvedParams.id
 
   // Pobierz dane klienta z API
   const customer = await getCustomer(customerId) || fallbackCustomerData
@@ -335,8 +403,17 @@ export default async function CustomerDetailsPage({ params }: { params: { id: st
                           <span className="text-muted-foreground">Media społecznościowe:</span>
                           <div className="flex space-x-2">
                             {Object.entries(customer.social_media_links).map(([platform, url]) => (
-                              <a key={platform} href={typeof url === 'string' ? url : ''} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                              <a
+                                key={platform}
+                                href={typeof url === 'string' ? url : ''}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:text-primary/80"
+                                title={`${platform.charAt(0).toUpperCase() + platform.slice(1)}`}
+                                aria-label={`Profil ${platform} klienta`}
+                              >
                                 <Share2 className="h-4 w-4" />
+                                <span className="sr-only">{platform}</span>
                               </a>
                             ))}
                           </div>

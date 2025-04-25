@@ -5,9 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { InventoryTable } from "@/components/inventory/inventory-table"
 import { InventoryStats } from "@/components/inventory/inventory-stats"
 import { InventoryCategories } from "@/components/inventory/inventory-categories"
+import { InventoryProduct } from "./inventory-server"
 
-// Przykładowe dane produktów magazynowych
-export const inventoryData = [
+// Przykładowe dane produktów magazynowych (używane tylko gdy nie przekazano initialInventory)
+const defaultInventoryData: InventoryProduct[] = [
   {
     id: "INV001",
     name: "Filtr powietrza HEPA",
@@ -140,9 +141,16 @@ export const inventoryData = [
   },
 ]
 
-export function InventoryView() {
+interface InventoryViewProps {
+  initialInventory?: InventoryProduct[]
+}
+
+export function InventoryView({ initialInventory }: InventoryViewProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+
+  // Użyj przekazanych danych lub domyślnych
+  const inventoryData = initialInventory || defaultInventoryData
 
   // Filtrowanie produktów
   const filteredProducts = inventoryData.filter((product) => {

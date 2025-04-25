@@ -8,6 +8,10 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 
+interface TicketsStatsProps {
+  initialTickets?: any[]
+}
+
 // Przykładowe dane dla wykresów
 const monthlyTicketsData = [
   { month: "Sty", total: 45, open: 5, closed: 40, avgResolutionTime: 48 },
@@ -54,7 +58,9 @@ const customerSatisfactionData = [
   { month: "Gru", satisfaction: 4.8 },
 ]
 
-export function TicketsStats() {
+export function TicketsStats({ initialTickets = [] }: TicketsStatsProps) {
+  // Tutaj możemy wykorzystać initialTickets do generowania statystyk
+  // Na razie używamy przykładowych danych
   return (
     <Tabs defaultValue="overview" className="space-y-4">
       <TabsList>

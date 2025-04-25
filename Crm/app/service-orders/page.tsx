@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { PlusCircle, Filter } from "lucide-react"
+import { PlusCircle, Filter, List, KanbanSquare } from "lucide-react"
 import { Suspense } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -9,8 +9,10 @@ import { UserNav } from "@/components/user-nav"
 import { MainNav } from "@/components/main-nav"
 import { Search } from "@/components/search"
 import { NotificationCenter } from "@/components/notifications/notification-center"
-import { getServiceOrders } from "@/lib/api"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ServiceOrdersKanban } from "@/components/service-orders/service-orders-kanban"
+import { createServerClient } from "@/lib/supabase"
 
 export const metadata: Metadata = {
   title: "Zlecenia serwisowe - HVAC CRM ERP",
@@ -43,8 +45,26 @@ const fallbackData = [
 
 async function ServiceOrdersTable() {
   try {
-    // Pobieranie danych z Supabase
-    const orders = await getServiceOrders()
+    // Pobieranie danych bezpośrednio z Supabase w komponencie serwerowym
+    const supabase = await createServerClient()
+
+    console.log("Fetching service orders data")
+
+    const { data: orders, error } = await supabase
+      .from('service_orders')
+      .select(`
+        *,
+        customers(id, name),
+        sites(id, name),
+        devices(id, model),
+        technicians(id, name)
+      `)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error("Error fetching service orders:", error)
+      return <DataTable data={fallbackData} columns={columns} />
+    }
 
     // Mapowanie danych z Supabase do formatu wymaganego przez tabelę
     const formattedOrders = orders.map(order => ({
@@ -57,6 +77,8 @@ async function ServiceOrdersTable() {
       created_at: order.created_at,
       scheduled_date: order.scheduled_date || new Date().toISOString(),
     }))
+
+    console.log(`Fetched ${formattedOrders.length} service orders`)
 
     return <DataTable data={formattedOrders.length > 0 ? formattedOrders : fallbackData} columns={columns} />
   } catch (error) {
@@ -118,9 +140,26 @@ export default function ServiceOrdersPage() {
           </div>
         </div>
         <div className="space-y-4">
-          <Suspense fallback={<ServiceOrdersTableSkeleton />}>
-            <ServiceOrdersTable />
-          </Suspense>
+          <Tabs defaultValue="table" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="table" className="flex items-center">
+                <List className="mr-2 h-4 w-4" />
+                Tabela
+              </TabsTrigger>
+              <TabsTrigger value="kanban" className="flex items-center">
+                <KanbanSquare className="mr-2 h-4 w-4" />
+                Kanban
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="table" className="space-y-4">
+              <Suspense fallback={<ServiceOrdersTableSkeleton />}>
+                <ServiceOrdersTable />
+              </Suspense>
+            </TabsContent>
+            <TabsContent value="kanban" className="space-y-4">
+              <ServiceOrdersKanban />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

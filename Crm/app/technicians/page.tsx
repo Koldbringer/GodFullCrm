@@ -7,11 +7,11 @@ import { UserNav } from "@/components/user-nav"
 import { MainNav } from "@/components/main-nav"
 import { Search } from "@/components/search"
 import { NotificationCenter } from "@/components/notifications/notification-center"
-import { getTechnicians } from "@/lib/api"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { createServerClient } from "@/lib/supabase"
 
 export const metadata: Metadata = {
   title: "Technicy - HVAC CRM ERP",
@@ -65,77 +65,66 @@ function getStatusColor(status: string) {
 
 async function TechniciansGrid() {
   try {
-    // Pobieranie danych z Supabase
-    const technicians = await getTechnicians()
-    
+    // Pobieranie danych bezpośrednio z Supabase w komponencie serwerowym
+    const supabase = await createServerClient()
+
+    console.log("Fetching technicians data")
+
+    const { data: technicians, error } = await supabase
+      .from('technicians')
+      .select('*')
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error("Error fetching technicians:", error)
+      return renderTechnicianCards(fallbackData)
+    }
+
+    console.log(`Fetched ${technicians.length} technicians`)
+
     // Używamy danych z API lub danych zastępczych, jeśli API zwróci pusty wynik
     const techData = technicians.length > 0 ? technicians : fallbackData
-    
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {techData.map((tech) => (
-          <Card key={tech.id} className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">{tech.name}</CardTitle>
-                <div className={`w-3 h-3 rounded-full ${getStatusColor(tech.status)}`} />
-              </div>
-              <CardDescription>{tech.specialization || "Brak specjalizacji"}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={tech.avatar_url || ""} alt={tech.name} />
-                  <AvatarFallback>{getInitials(tech.name)}</AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <p className="text-sm">{tech.email}</p>
-                  <p className="text-sm text-muted-foreground">{tech.phone}</p>
-                </div>
-              </div>
-              <div className="mt-4 flex justify-between items-center">
-                <Badge variant={tech.status === "Dostępny" ? "default" : "outline"}>{tech.status}</Badge>
-                <Button variant="outline" size="sm">Szczegóły</Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
+
+    return renderTechnicianCards(techData)
   } catch (error) {
     console.error("Error fetching technicians:", error)
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {fallbackData.map((tech) => (
-          <Card key={tech.id} className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">{tech.name}</CardTitle>
-                <div className={`w-3 h-3 rounded-full ${getStatusColor(tech.status)}`} />
-              </div>
-              <CardDescription>{tech.specialization || "Brak specjalizacji"}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={tech.avatar_url || ""} alt={tech.name} />
-                  <AvatarFallback>{getInitials(tech.name)}</AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <p className="text-sm">{tech.email}</p>
-                  <p className="text-sm text-muted-foreground">{tech.phone}</p>
-                </div>
-              </div>
-              <div className="mt-4 flex justify-between items-center">
-                <Badge variant={tech.status === "Dostępny" ? "default" : "outline"}>{tech.status}</Badge>
-                <Button variant="outline" size="sm">Szczegóły</Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
+    return renderTechnicianCards(fallbackData)
   }
+}
+
+// Funkcja pomocnicza do renderowania kart techników
+function renderTechnicianCards(techData: any[]) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {techData.map((tech) => (
+        <Card key={tech.id} className="overflow-hidden">
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-start">
+              <CardTitle className="text-lg">{tech.name}</CardTitle>
+              <div className={`w-3 h-3 rounded-full ${getStatusColor(tech.status)}`} />
+            </div>
+            <CardDescription>{tech.specialization || "Brak specjalizacji"}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={tech.avatar_url || ""} alt={tech.name} />
+                <AvatarFallback>{getInitials(tech.name)}</AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <p className="text-sm">{tech.email}</p>
+                <p className="text-sm text-muted-foreground">{tech.phone}</p>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-between items-center">
+              <Badge variant={tech.status === "Dostępny" ? "default" : "outline"}>{tech.status}</Badge>
+              <Button variant="outline" size="sm">Szczegóły</Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
 }
 
 function TechniciansGridSkeleton() {

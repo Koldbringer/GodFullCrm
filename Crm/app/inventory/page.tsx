@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { UserNav } from "@/components/user-nav"
 import { MainNav } from "@/components/main-nav"
 import { Search } from "@/components/search"
-import { InventoryView } from "@/components/inventory/inventory-view"
+import { InventoryServer } from "@/components/inventory/inventory-server"
 
 export const metadata: Metadata = {
   title: "Magazyn - HVAC CRM ERP",
@@ -35,7 +35,7 @@ export default function InventoryPage() {
           </div>
         </div>
         <div className="space-y-4">
-          <InventoryView />
+          <InventoryServer />
         </div>
       </div>
     </div>

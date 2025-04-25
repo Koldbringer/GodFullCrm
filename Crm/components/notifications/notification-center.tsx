@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { getNotifications, getUnreadNotificationsCount, markNotificationAsRead, markAllNotificationsAsRead, toggleNotificationStar, deleteNotification as apiDeleteNotification } from "@/lib/api"
 import {
   Bell,
@@ -114,12 +115,23 @@ export function NotificationCenter() {
   const fetchNotifications = async () => {
     try {
       const data = await getNotifications()
-      const uiNotifications = convertToUINotifications(data)
-      setNotifications(uiNotifications)
-      const unreadCount = await getUnreadNotificationsCount()
-      setNotificationCount(unreadCount)
+      // Check if data is an array before converting
+      if (Array.isArray(data)) {
+        const uiNotifications = convertToUINotifications(data)
+        setNotifications(uiNotifications)
+        const unreadCount = await getUnreadNotificationsCount()
+        setNotificationCount(unreadCount)
+      } else {
+        // If data is not an array, set empty notifications
+        setNotifications([])
+        setNotificationCount(0)
+        console.warn('Notifications data is not an array:', data)
+      }
     } catch (error) {
       console.error('Error fetching notifications:', error)
+      // Set empty notifications on error
+      setNotifications([])
+      setNotificationCount(0)
     }
   }
 
@@ -587,8 +599,10 @@ export function NotificationCenter() {
               <Button variant="ghost" size="sm" onClick={markAllAsRead} disabled={notificationCount === 0}>
                 Oznacz wszystkie jako przeczytane
               </Button>
-              <Button variant="link" size="sm" onClick={() => setIsOpen(false)}>
-                Zobacz wszystkie
+              <Button variant="link" size="sm" asChild>
+                <Link href="/notifications">
+                  Zobacz wszystkie
+                </Link>
               </Button>
             </div>
           </div>

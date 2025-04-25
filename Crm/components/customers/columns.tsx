@@ -1,7 +1,7 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Building2, User, CheckCircle, XCircle, Mail, Phone } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 // Definicja typu dla danych klienta w tabeli
 export type CustomerTableData = {
@@ -30,67 +32,125 @@ export type CustomerTableData = {
 export const columns: ColumnDef<CustomerTableData>[] = [
   {
     accessorKey: "name",
-    header: ({ column }) => {
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Nazwa" />,
+    cell: ({ row }) => {
       return (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          Nazwa
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
+        <div className="font-medium">{row.getValue("name")}</div>
+      )
+    },
+    enableSorting: true,
+    enableHiding: false,
+  },
+  {
+    accessorKey: "tax_id",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="NIP/PESEL" />,
+    cell: ({ row }) => {
+      const taxId = row.getValue("tax_id") as string
+      return taxId ? <div className="font-mono text-xs">{taxId}</div> : <div className="text-muted-foreground text-xs">Brak</div>
+    },
+    enableSorting: true,
+  },
+  {
+    accessorKey: "email",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Email" />,
+    cell: ({ row }) => {
+      const email = row.getValue("email") as string
+      return (
+        <div className="flex items-center">
+          <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
+          <span className="text-sm">{email}</span>
+        </div>
       )
     },
   },
   {
-    accessorKey: "tax_id",
-    header: "NIP/PESEL",
-  },
-  {
-    accessorKey: "email",
-    header: "Email",
-  },
-  {
     accessorKey: "phone",
-    header: "Telefon",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Telefon" />,
+    cell: ({ row }) => {
+      const phone = row.getValue("phone") as string
+      return (
+        <div className="flex items-center">
+          <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-mono">{phone}</span>
+        </div>
+      )
+    },
   },
   {
     accessorKey: "type",
-    header: "Typ",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Typ" />,
     cell: ({ row }) => {
       const type = row.getValue("type") as string
 
       return (
-        <Badge variant={type === "Biznesowy" ? "default" : "outline"}>
-          {type}
-        </Badge>
+        <div className="flex items-center">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant={type === "Biznesowy" ? "default" : "outline"} className="flex items-center gap-1">
+                  {type === "Biznesowy" ? <Building2 className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                  {type}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{type === "Biznesowy" ? "Klient biznesowy" : "Klient indywidualny"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       )
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
     },
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ row }) => {
       const status = row.getValue("status") as string
 
       return (
-        <Badge variant={status === "Aktywny" ? "default" : status === "Nieaktywny" ? "secondary" : "outline"}>
-          {status}
-        </Badge>
+        <div className="flex items-center">
+          <Badge
+            variant={status === "Aktywny" ? "default" : status === "Nieaktywny" ? "secondary" : "outline"}
+            className="flex items-center gap-1"
+          >
+            {status === "Aktywny" ?
+              <CheckCircle className="h-3 w-3 text-green-500" /> :
+              <XCircle className="h-3 w-3 text-red-500" />
+            }
+            {status}
+          </Badge>
+        </div>
       )
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
     },
   },
   {
     accessorKey: "created_at",
-    header: ({ column }) => {
-      return (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          Data dodania
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Data dodania" />,
     cell: ({ row }) => {
       const date = new Date(row.getValue("created_at"))
-      return <div>{date.toLocaleDateString("pl-PL")}</div>
+      const formattedDate = date.toLocaleDateString("pl-PL")
+      const formattedTime = date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })
+
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="text-sm">{formattedDate}</div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Dodano: {formattedDate} {formattedTime}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )
     },
+    enableSorting: true,
   },
   {
     id: "actions",
@@ -107,7 +167,9 @@ export const columns: ColumnDef<CustomerTableData>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Akcje</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(customer.id)}>Kopiuj ID</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(customer.id)}>
+              Kopiuj ID
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href={`/customers/${customer.id}`}>Szczegóły klienta</Link>
@@ -121,7 +183,10 @@ export const columns: ColumnDef<CustomerTableData>[] = [
             <DropdownMenuItem asChild>
               <Link href={`/customers/${customer.id}?tab=devices`}>Pokaż urządzenia</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">Usuń klienta</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-red-600">
+              Usuń klienta
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

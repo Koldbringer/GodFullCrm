@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { format } from "date-fns"
 import { pl } from "date-fns/locale"
 import { ArrowUpDown, MoreHorizontal, Package } from "lucide-react"
@@ -19,112 +19,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import { getTickets } from "@/lib/api"
 import { Skeleton } from "@/components/ui/skeleton"
 import { StatusBadge } from "@/components/atoms/status-badge"
 import { TicketsFilterBar } from "@/components/organisms/tickets-filter-bar"
+import { fallbackTicketsData } from "./tickets-server"
 
-// Przykładowe dane zgłoszeń na wypadek błędu API
-const fallbackTicketsData = [
-  {
-    id: "TKT-001",
-    title: "Awaria klimatyzacji w biurze",
-    status: "open",
-    priority: "high",
-    created_at: "2023-10-15T10:30:00Z",
-    customer: {
-      id: "c1",
-      name: "Firma ABC",
-    },
-    site: {
-      id: "s1",
-      name: "Biuro główne",
-    },
-    device: {
-      id: "d1",
-      type: "Klimatyzator",
-      model: "Samsung WindFree",
-    },
-    technician: {
-      id: "t1",
-      name: "Jan Kowalski",
-    },
-    scheduled_date: "2023-10-17T09:00:00Z",
-  },
-  {
-    id: "TKT-002",
-    title: "Przegląd okresowy systemu wentylacji",
-    status: "scheduled",
-    priority: "medium",
-    created_at: "2023-10-14T14:45:00Z",
-    customer: {
-      id: "c2",
-      name: "Restauracja XYZ",
-    },
-    site: {
-      id: "s2",
-      name: "Sala główna",
-    },
-    device: {
-      id: "d2",
-      type: "System wentylacji",
-      model: "Daikin VRV IV",
-    },
-    technician: {
-      id: "t2",
-      name: "Anna Nowak",
-    },
-    scheduled_date: "2023-10-20T11:00:00Z",
-  },
-  {
-    id: "TKT-003",
-    title: "Montaż nowej pompy ciepła",
-    status: "in_progress",
-    priority: "medium",
-    created_at: "2023-10-10T09:15:00Z",
-    customer: {
-      id: "c3",
-      name: "Jan Nowak",
-    },
-    site: {
-      id: "s3",
-      name: "Dom jednorodzinny",
-    },
-    device: {
-      id: "d3",
-      type: "Pompa ciepła",
-      model: "Viessmann Vitocal 200-S",
-    },
-    technician: null,
-    scheduled_date: "2023-10-16T10:00:00Z",
-  }
-];
+interface TicketsListProps {
+  initialTickets?: any[]
+}
 
-export function TicketsList() {
-  const [tickets, setTickets] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+// Przykładowe dane zgłoszeń są teraz importowane z tickets-server.tsx
+
+export function TicketsList({ initialTickets = [] }: TicketsListProps) {
+  const [tickets] = useState<any[]>(initialTickets.length > 0 ? initialTickets : fallbackTicketsData)
+  const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null)
   const [sortField, setSortField] = useState<string>("created_at")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
-
-  // Pobieranie danych z API
-  useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const data = await getTickets()
-        setTickets(data)
-      } catch (error) {
-        console.error('Error fetching tickets:', error)
-        setTickets(fallbackTicketsData)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchTickets()
-  }, [])
 
   // Funkcja do sortowania
   const toggleSort = (field: string) => {

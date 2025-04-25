@@ -1,15 +1,12 @@
 import type { Metadata } from "next"
-import { PlusCircle, Users } from "lucide-react"
+import { PlusCircle, Users, Building2, User, Download, Upload, Filter } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/customers/data-table"
 import { columns } from "@/components/customers/columns"
-import { UserNav } from "@/components/user-nav"
-import { MainNav } from "@/components/main-nav"
-import { Search } from "@/components/search"
-import { NotificationCenter } from "@/components/notifications/notification-center"
-import { getCustomers } from "@/lib/api"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { createServerClient } from "@/lib/supabase"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { DataTable } from "@/components/ui/data-table"
+import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 
 export const metadata: Metadata = {
@@ -43,12 +40,41 @@ const fallbackData = [
 
 async function getCustomerData() {
   try {
-    const { data, count } = await getCustomers({
+    // Użyj klienta serwerowego do pobierania danych
+    const supabase = await createServerClient()
+
+    console.log("Wywołanie getCustomers z parametrami:", {
       limit: 100,
       sortBy: "name",
       sortOrder: "asc"
     })
-    return { data, count }
+
+    // Wykonaj zapytanie do bazy danych
+    let query = supabase
+      .from('customers')
+      .select('*', { count: 'exact' })
+
+    // Dodaj limity i sortowanie
+    query = query.limit(100).order('name', { ascending: true })
+
+    // Wykonaj zapytanie
+    const { data, error, count } = await query
+
+    console.log("Wynik z Supabase:", {
+      data: Array.isArray(data) ? `${data.length} rekordów` : data,
+      error,
+      count
+    })
+
+    if (error) {
+      console.error('Error fetching customers:', error)
+      return { data: fallbackData, count: fallbackData.length }
+    }
+
+    // Log do konsoli serwera
+    console.log(Array.isArray(data) ? data : JSON.stringify(data))
+
+    return { data: data || [], count: count || 0 }
   } catch (error) {
     console.error("Error fetching customers:", error)
     return { data: fallbackData, count: fallbackData.length }
@@ -70,84 +96,167 @@ export default async function CustomersPage() {
     created_at: customer.created_at,
   }))
 
+  // Liczba klientów biznesowych i indywidualnych
+  const businessCustomers = data.filter(c => c.type === "Biznesowy").length
+  const individualCustomers = data.filter(c => c.type === "Indywidualny").length
+
+  // Liczba nowych klientów (ostatnie 30 dni)
+  const newCustomers = data.filter(c => {
+    const date = new Date(c.created_at)
+    const now = new Date()
+    const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30))
+    return date >= thirtyDaysAgo
+  }).length
+
+  // Opcje filtrowania dla tabeli
+  const typeOptions = [
+    {
+      label: "Biznesowy",
+      value: "Biznesowy",
+      icon: "building2",
+    },
+    {
+      label: "Indywidualny",
+      value: "Indywidualny",
+      icon: "user",
+    },
+  ]
+
+  const statusOptions = [
+    {
+      label: "Aktywny",
+      value: "Aktywny",
+    },
+    {
+      label: "Nieaktywny",
+      value: "Nieaktywny",
+    },
+  ]
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <div className="border-b">
-        <div className="flex h-16 items-center px-4">
-          <MainNav className="mx-6" />
-          <div className="ml-auto flex items-center space-x-4">
-            <Search />
-            <NotificationCenter />
-            <UserNav />
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Klienci</h1>
+          <p className="text-muted-foreground">Zarządzaj klientami i ich danymi</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-9">
+            <Filter className="mr-2 h-4 w-4" />
+            Filtruj
+          </Button>
+          <Button variant="outline" size="sm" className="h-9">
+            <Download className="mr-2 h-4 w-4" />
+            Eksportuj
+          </Button>
+          <Button asChild>
+            <Link href="/customers/new">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Dodaj klienta
+            </Link>
+          </Button>
         </div>
       </div>
-      <div className="flex-1 space-y-4 p-8 pt-6">
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Klienci</h2>
-          <div className="flex items-center space-x-2">
-            <Link href="/customers/new">
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Dodaj klienta
-              </Button>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30">
+            <CardTitle className="text-sm font-medium">Wszyscy klienci</CardTitle>
+            <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold">{count}</div>
+            <p className="text-xs text-muted-foreground mt-1">Liczba klientów w systemie</p>
+          </CardContent>
+          <CardFooter className="p-2 border-t bg-muted/30">
+            <Link href="/customers" className="text-xs text-muted-foreground hover:text-primary flex items-center w-full justify-end">
+              Zarządzaj klientami
             </Link>
-          </div>
-        </div>
+          </CardFooter>
+        </Card>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Wszyscy klienci</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{count}</div>
-              <p className="text-xs text-muted-foreground">Liczba klientów w systemie</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Klienci biznesowi</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{data.filter(c => c.type === "Biznesowy").length}</div>
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950/50 dark:to-amber-900/30">
+            <CardTitle className="text-sm font-medium">Klienci biznesowi</CardTitle>
+            <Building2 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold">{businessCustomers}</div>
+            <div className="flex items-center justify-between mt-1">
               <p className="text-xs text-muted-foreground">Liczba klientów biznesowych</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Klienci indywidualni</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{data.filter(c => c.type === "Indywidualny").length}</div>
-              <p className="text-xs text-muted-foreground">Liczba klientów indywidualnych</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Nowi klienci</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {data.filter(c => {
-                  const date = new Date(c.created_at)
-                  const now = new Date()
-                  const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30))
-                  return date >= thirtyDaysAgo
-                }).length}
-              </div>
-              <p className="text-xs text-muted-foreground">Dodani w ciągu ostatnich 30 dni</p>
-            </CardContent>
-          </Card>
-        </div>
+              <Badge variant="outline" className="text-xs font-normal">
+                {Math.round((businessCustomers / count) * 100)}%
+              </Badge>
+            </div>
+          </CardContent>
+          <CardFooter className="p-2 border-t bg-muted/30">
+            <Link href="/customers?type=Biznesowy" className="text-xs text-muted-foreground hover:text-primary flex items-center w-full justify-end">
+              Pokaż klientów biznesowych
+            </Link>
+          </CardFooter>
+        </Card>
 
-        <div className="space-y-4">
-          <DataTable data={tableData} columns={columns} />
-        </div>
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30">
+            <CardTitle className="text-sm font-medium">Klienci indywidualni</CardTitle>
+            <User className="h-5 w-5 text-green-600 dark:text-green-400" />
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold">{individualCustomers}</div>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">Liczba klientów indywidualnych</p>
+              <Badge variant="outline" className="text-xs font-normal">
+                {Math.round((individualCustomers / count) * 100)}%
+              </Badge>
+            </div>
+          </CardContent>
+          <CardFooter className="p-2 border-t bg-muted/30">
+            <Link href="/customers?type=Indywidualny" className="text-xs text-muted-foreground hover:text-primary flex items-center w-full justify-end">
+              Pokaż klientów indywidualnych
+            </Link>
+          </CardFooter>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/30">
+            <CardTitle className="text-sm font-medium">Nowi klienci</CardTitle>
+            <Upload className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold">{newCustomers}</div>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">Dodani w ciągu ostatnich 30 dni</p>
+              <Badge variant="outline" className="text-xs font-normal">
+                {Math.round((newCustomers / count) * 100)}%
+              </Badge>
+            </div>
+          </CardContent>
+          <CardFooter className="p-2 border-t bg-muted/30">
+            <Link href="/customers?sort=created_at&order=desc" className="text-xs text-muted-foreground hover:text-primary flex items-center w-full justify-end">
+              Pokaż nowych klientów
+            </Link>
+          </CardFooter>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+        <DataTable
+          data={tableData}
+          columns={columns}
+          searchColumn="name"
+          filterableColumns={[
+            {
+              id: "type",
+              title: "Typ klienta",
+              options: typeOptions,
+            },
+            {
+              id: "status",
+              title: "Status",
+              options: statusOptions,
+            },
+          ]}
+        />
       </div>
     </div>
   )

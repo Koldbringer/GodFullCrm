@@ -95,9 +95,3 @@ function InventoryItemCard({ id, name, category, quantity, unit, location }: Inv
     </Card>
   )
 }
-\
-### Rozbudowa systemu HVAC CRM/ERP według wizji Elona Muska
-
-Kontynuuję rozwój brakujących funkcji, które uzupełnią nasz boski system zarządzania firmą HVAC. Zaimplementuję kluczowe moduły, które sprawią, że system będzie kompletny i rewolucyjny.
-
-## 1. Zarządzanie pracownikami i technikami

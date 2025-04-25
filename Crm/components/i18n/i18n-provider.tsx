@@ -9,7 +9,7 @@ import resourcesToBackend from 'i18next-resources-to-backend'
 // Inicjalizacja i18next
 i18next
   .use(initReactI18next)
-  .use(resourcesToBackend((language: string, namespace: string) => 
+  .use(resourcesToBackend((language: string, namespace: string) =>
     import(`../../public/locales/${language}/${namespace}.json`)
   ))
   .init({
@@ -41,13 +41,13 @@ const I18nContext = createContext<I18nContextType>({
 export const useTranslation = () => {
   const { t, i18n } = useTranslationOriginal()
   const { locale } = useI18n()
-  
+
   useEffect(() => {
     if (i18n.language !== locale) {
       i18n.changeLanguage(locale)
     }
   }, [locale, i18n])
-  
+
   return { t, i18n }
 }
 
@@ -59,34 +59,37 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState('pl')
   const router = useRouter()
   const pathname = usePathname()
-  
+
   const changeLocale = (newLocale: string) => {
     if (newLocale !== locale && ['pl', 'en'].includes(newLocale)) {
       setLocale(newLocale)
-      document.documentElement.lang = newLocale
+      // Don't modify the HTML element to avoid hydration issues
+      // document.documentElement.lang = newLocale
       localStorage.setItem('locale', newLocale)
-      
+
       // Opcjonalnie: przekierowanie na tę samą stronę z nowym językiem
       // router.push(pathname)
     }
   }
-  
+
   useEffect(() => {
     // Sprawdź, czy jest zapisany język w localStorage
     const savedLocale = localStorage.getItem('locale')
     if (savedLocale && ['pl', 'en'].includes(savedLocale)) {
       setLocale(savedLocale)
-      document.documentElement.lang = savedLocale
+      // Don't modify the HTML element to avoid hydration issues
+      // document.documentElement.lang = savedLocale
     } else {
       // Sprawdź język przeglądarki
       const browserLang = navigator.language.split('-')[0]
       if (['pl', 'en'].includes(browserLang)) {
         setLocale(browserLang)
-        document.documentElement.lang = browserLang
+        // Don't modify the HTML element to avoid hydration issues
+        // document.documentElement.lang = browserLang
       }
     }
   }, [])
-  
+
   return (
     <I18nContext.Provider value={{ locale, changeLocale }}>
       {children}

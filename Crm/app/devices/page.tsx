@@ -10,8 +10,8 @@ import { MainNav } from "@/components/main-nav"
 import { Search } from "@/components/search"
 import { DeviceTypeFilter } from "@/components/devices/device-type-filter"
 import { NotificationCenter } from "@/components/notifications/notification-center"
-import { getDevices } from "@/lib/api"
 import { Skeleton } from "@/components/ui/skeleton"
+import { createServerClient } from "@/lib/supabase"
 
 export const metadata: Metadata = {
   title: "Urządzenia HVAC - HVAC CRM ERP",
@@ -48,8 +48,27 @@ const fallbackData = [
 
 async function DevicesTable() {
   try {
-    // Pobieranie danych z Supabase
-    const devices = await getDevices()
+    // Pobieranie danych bezpośrednio z Supabase w komponencie serwerowym
+    const supabase = await createServerClient()
+
+    console.log("Fetching devices data")
+
+    const { data: devices, error } = await supabase
+      .from('devices')
+      .select(`
+        *,
+        sites(
+          id,
+          name,
+          customers(id, name)
+        )
+      `)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error("Error fetching devices:", error)
+      return <DataTable data={fallbackData} columns={columns} />
+    }
 
     // Mapowanie danych z Supabase do formatu wymaganego przez tabelę
     const formattedDevices = devices.map(device => ({
@@ -64,6 +83,8 @@ async function DevicesTable() {
       last_service_date: null,
       warranty_end_date: device.warranty_expiry || new Date().toISOString(),
     }))
+
+    console.log(`Fetched ${formattedDevices.length} devices`)
 
     return <DataTable data={formattedDevices.length > 0 ? formattedDevices : fallbackData} columns={columns} />
   } catch (error) {
