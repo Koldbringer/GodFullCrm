@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import dynamic from 'next/dynamic'
 import { LocationData } from "@/components/map/map-view"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -16,9 +17,14 @@ import {
   Search
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
-import { ClusteredMap } from "@/components/map/clustered-map"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+
+// Dynamically import the ClusteredMap component with no SSR
+const ClusteredMap = dynamic(
+  () => import('@/components/map/clustered-map').then((mod) => mod.ClusteredMap),
+  { ssr: false }
+)
 
 interface MapViewClientProps {
   initialLocations: LocationData[]
@@ -54,13 +60,15 @@ export function MapViewClientClustered({
     }
 
     const query = searchQuery.toLowerCase().trim()
-    const filtered = initialLocations.filter(location => 
-      location.name.toLowerCase().includes(query) || 
+    const filtered = initialLocations.filter(location =>
+      location.name.toLowerCase().includes(query) ||
       location.address?.toLowerCase().includes(query) ||
       location.customer?.name.toLowerCase().includes(query) ||
-      location.meta?.district?.toString().toLowerCase().includes(query)
+      location.meta?.district?.toString().toLowerCase().includes(query) ||
+      location.meta?.customerType?.toString().toLowerCase().includes(query) ||
+      location.meta?.siteType?.toString().toLowerCase().includes(query)
     )
-    
+
     setFilteredLocations(filtered)
   }
 
@@ -147,7 +155,7 @@ export function MapViewClientClustered({
             </p>
           )}
         </div>
-        
+
         <ClusteredMap
           locations={filteredLocations}
           onMarkerClick={handleMarkerClick}
@@ -258,7 +266,17 @@ export function MapViewClientClustered({
           </Card>
         )}
 
-        <div className="mt-4 grid grid-cols-3 gap-4">
+        <div className="mt-4 grid grid-cols-4 gap-4">
+          <Card className="col-span-1">
+            <CardContent className="p-4 text-center">
+              <User className="h-8 w-8 mx-auto text-blue-500" />
+              <div className="mt-2 text-2xl font-bold">
+                {filteredLocations.filter(loc => loc.type === "customer").length}
+              </div>
+              <div className="text-xs text-muted-foreground">Klienci</div>
+            </CardContent>
+          </Card>
+
           <Card className="col-span-1">
             <CardContent className="p-4 text-center">
               <Building2 className="h-8 w-8 mx-auto text-purple-500" />

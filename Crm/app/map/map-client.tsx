@@ -207,7 +207,17 @@ export function MapViewClient({
           </Card>
         )}
 
-        <div className="mt-4 grid grid-cols-3 gap-4">
+        <div className="mt-4 grid grid-cols-4 gap-4">
+          <Card className="col-span-1">
+            <CardContent className="p-4 text-center">
+              <User className="h-8 w-8 mx-auto text-blue-500" />
+              <div className="mt-2 text-2xl font-bold">
+                {filteredLocations.filter(loc => loc.type === "customer").length}
+              </div>
+              <div className="text-xs text-muted-foreground">Klienci</div>
+            </CardContent>
+          </Card>
+
           <Card className="col-span-1">
             <CardContent className="p-4 text-center">
               <Building2 className="h-8 w-8 mx-auto text-purple-500" />

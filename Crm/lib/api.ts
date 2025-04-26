@@ -69,20 +69,16 @@ export async function getCustomers({
 }
 
 export async function getCustomerById(id: string, includeRelated: boolean = false) {
-  let query = supabase.from('customers');
-
-  if (includeRelated) {
-    query = query.select(`
+  const query = includeRelated
+    ? supabase.from('customers').select(`
       *,
       sites(id, name, street, city, zip_code, type, status),
       customer_contacts(id, name, position, email, phone, is_primary),
       service_orders(id, title, status, scheduled_date, priority),
       invoices(id, invoice_number, issue_date, due_date, total_amount, status),
       warranty_claims(id, device_id, claim_date, status, devices(name, model))
-    `);
-  } else {
-    query = query.select('*');
-  }
+    `)
+    : supabase.from('customers').select('*');
 
   const { data, error } = await query.eq('id', id).single();
 
@@ -153,17 +149,12 @@ export async function getSiteById(id: string) {
 }
 
 export async function getSitesByCustomerId(customerId: string, includeDevices: boolean = false) {
-  let query = supabase
-    .from('sites')
-
-  if (includeDevices) {
-    query = query.select(`
+  const query = includeDevices
+    ? supabase.from('sites').select(`
       *,
       devices(id, name, model, serial_number, type, status)
     `)
-  } else {
-    query = query.select('*')
-  }
+    : supabase.from('sites').select('*');
 
   const { data, error } = await query
     .eq('customer_id', customerId)

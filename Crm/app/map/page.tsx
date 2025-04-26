@@ -50,7 +50,7 @@ async function getMapData({
     .limit(limit)
 
   // Apply customer type filter if provided
-  if (customerType) {
+  if (customerType && customerType !== 'all') {
     customersQuery = customersQuery.eq('type', customerType)
   }
 
@@ -73,7 +73,7 @@ async function getMapData({
     .limit(limit)
 
   // Apply district filter if provided
-  if (district) {
+  if (district && district !== 'all') {
     // Try to filter by district first, then by city if no district is available
     addressesQuery = addressesQuery.or(`district.ilike.%${district}%,city.ilike.%${district}%`)
   }
@@ -123,7 +123,7 @@ async function getMapData({
     .limit(limit)
 
   // Apply service status filter if provided
-  if (serviceStatus) {
+  if (serviceStatus && serviceStatus !== 'all') {
     serviceOrdersQuery = serviceOrdersQuery.eq('status', serviceStatus)
   }
 
@@ -201,7 +201,7 @@ async function getMapData({
 
   // Filter addresses by customer type if provided
   let filteredAddresses = addressesWithCustomers
-  if (customerType) {
+  if (customerType && customerType !== 'all') {
     filteredAddresses = filteredAddresses.filter(
       address => {
         if (address && typeof address === 'object' && 'customer' in address) {
@@ -230,13 +230,13 @@ export default async function MapPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  // Extract filter parameters from URL
-  const params = searchParams;
-  const district = typeof params.district === 'string' ? params.district : ''
-  const limit = typeof params.limit === 'string' ? parseInt(params.limit) : 100
-  const customerType = typeof params.customerType === 'string' ? params.customerType : ''
-  const siteType = typeof params.siteType === 'string' ? params.siteType : ''
-  const serviceStatus = typeof params.serviceStatus === 'string' ? params.serviceStatus : ''
+  // Extract filter parameters from URL - convert to proper types
+  const district = typeof searchParams.district === 'string' ? searchParams.district : 'all'
+  const limitStr = typeof searchParams.limit === 'string' ? searchParams.limit : '100'
+  const limit = parseInt(limitStr) || 100
+  const customerType = typeof searchParams.customerType === 'string' ? searchParams.customerType : 'all'
+  const siteType = typeof searchParams.siteType === 'string' ? searchParams.siteType : 'all'
+  const serviceStatus = typeof searchParams.serviceStatus === 'string' ? searchParams.serviceStatus : 'all'
 
   // Get data with filters
   const {
@@ -281,11 +281,14 @@ export default async function MapPage({
 
         const addressObj = address as any; // Type assertion for simplicity
 
+        // Determine if this is a customer location or a site
+        const locationType = addressObj.customer ? "customer" : "site";
+
         mapLocations.push({
           id: `address-${addressObj.id}`,
           name: addressObj.customer?.name || 'Lokalizacja',
           address: `${addressObj.street}, ${addressObj.zip_code} ${addressObj.city}`,
-          type: "site",
+          type: locationType,
           coordinates: {
             lat: parseFloat(addressObj.latitude),
             lng: parseFloat(addressObj.longitude)
@@ -296,8 +299,9 @@ export default async function MapPage({
             name: addressObj.customer.name
           } : undefined,
           meta: {
-            siteType: addressObj.type || 'primary',
-            district: addressObj.district || addressObj.city
+            siteType: addressObj.address_type || 'primary',
+            district: addressObj.district || addressObj.city,
+            customerType: addressObj.customer?.type || ''
           }
         });
       }
@@ -404,7 +408,7 @@ export default async function MapPage({
 
           <TabsContent value="customers">
             <MapViewClientClustered
-              initialLocations={mapLocations.filter(loc => loc.type === "site")}
+              initialLocations={mapLocations.filter(loc => loc.type === "customer")}
               title="Mapa lokalizacji klientów"
               description="Wizualizacja wszystkich lokalizacji klientów"
             />

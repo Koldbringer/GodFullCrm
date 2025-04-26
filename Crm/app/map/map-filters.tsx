@@ -47,43 +47,43 @@ export function MapFilters({
   const router = useRouter()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-  
+
   // Local state for filters
-  const [district, setDistrict] = useState(currentDistrict)
+  const [district, setDistrict] = useState(currentDistrict || 'all')
   const [limit, setLimit] = useState(currentLimit.toString())
-  const [siteType, setSiteType] = useState(currentSiteType)
-  const [customerType, setCustomerType] = useState(currentCustomerType)
-  const [serviceStatus, setServiceStatus] = useState(currentServiceStatus)
-  
+  const [siteType, setSiteType] = useState(currentSiteType || 'all')
+  const [customerType, setCustomerType] = useState(currentCustomerType || 'all')
+  const [serviceStatus, setServiceStatus] = useState(currentServiceStatus || 'all')
+
   // Check if any filters are active
   const hasActiveFilters = !!(currentDistrict || currentSiteType || currentCustomerType || currentServiceStatus || currentLimit !== 100)
-  
+
   // Apply filters
   const applyFilters = () => {
     const params = new URLSearchParams()
-    
-    if (district) params.set('district', district)
-    if (siteType) params.set('siteType', siteType)
-    if (customerType) params.set('customerType', customerType)
-    if (serviceStatus) params.set('serviceStatus', serviceStatus)
+
+    if (district && district !== 'all') params.set('district', district)
+    if (siteType && siteType !== 'all') params.set('siteType', siteType)
+    if (customerType && customerType !== 'all') params.set('customerType', customerType)
+    if (serviceStatus && serviceStatus !== 'all') params.set('serviceStatus', serviceStatus)
     if (limit && limit !== '100') params.set('limit', limit)
-    
+
     router.push(`${pathname}?${params.toString()}`)
     setOpen(false)
   }
-  
+
   // Clear all filters
   const clearFilters = () => {
-    setDistrict('')
+    setDistrict('all')
     setLimit('100')
-    setSiteType('')
-    setCustomerType('')
-    setServiceStatus('')
-    
+    setSiteType('all')
+    setCustomerType('all')
+    setServiceStatus('all')
+
     router.push(pathname)
     setOpen(false)
   }
-  
+
   return (
     <div className="flex items-center gap-2">
       <Dialog open={open} onOpenChange={setOpen}>
@@ -126,7 +126,7 @@ export function MapFilters({
                 max={500}
               />
             </div>
-            
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="district" className="text-right">
                 Dzielnica
@@ -136,7 +136,7 @@ export function MapFilters({
                   <SelectValue placeholder="Wszystkie dzielnice" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Wszystkie dzielnice</SelectItem>
+                  <SelectItem value="all">Wszystkie dzielnice</SelectItem>
                   {districts.map((d) => (
                     <SelectItem key={d} value={d}>
                       {d}
@@ -145,7 +145,7 @@ export function MapFilters({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="siteType" className="text-right">
                 Typ lokalizacji
@@ -155,7 +155,7 @@ export function MapFilters({
                   <SelectValue placeholder="Wszystkie typy" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Wszystkie typy</SelectItem>
+                  <SelectItem value="all">Wszystkie typy</SelectItem>
                   {siteTypes.map((type) => (
                     <SelectItem key={type} value={type}>
                       {type}
@@ -164,7 +164,7 @@ export function MapFilters({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="customerType" className="text-right">
                 Typ klienta
@@ -174,14 +174,14 @@ export function MapFilters({
                   <SelectValue placeholder="Wszyscy klienci" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Wszyscy klienci</SelectItem>
+                  <SelectItem value="all">Wszyscy klienci</SelectItem>
                   <SelectItem value="Firma">Firma</SelectItem>
                   <SelectItem value="Osoba prywatna">Osoba prywatna</SelectItem>
                   <SelectItem value="Instytucja">Instytucja</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="serviceStatus" className="text-right">
                 Status zlecenia
@@ -191,7 +191,7 @@ export function MapFilters({
                   <SelectValue placeholder="Wszystkie statusy" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Wszystkie statusy</SelectItem>
+                  <SelectItem value="all">Wszystkie statusy</SelectItem>
                   <SelectItem value="new">Nowe</SelectItem>
                   <SelectItem value="in_progress">W realizacji</SelectItem>
                   <SelectItem value="completed">Zakończone</SelectItem>
@@ -209,7 +209,7 @@ export function MapFilters({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {hasActiveFilters && (
         <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 px-2">
           <X className="h-4 w-4" />
