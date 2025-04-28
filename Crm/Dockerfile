@@ -14,6 +14,7 @@ FROM node:18-alpine
 
 WORKDIR /app
 ENV NODE_ENV production
+ENV PORT 3000
 
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
@@ -21,7 +22,7 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/next.config.mjs ./
 COPY --from=builder /app/next-i18next.config.js ./
 
-RUN npm ci --legacy-peer-deps --omit=dev
+RUN npm ci --omit=dev --legacy-peer-deps
 
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["npx", "next", "start"]
