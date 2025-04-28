@@ -1,7 +1,7 @@
 import { PlusCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { CalendarView } from "@/components/calendar/calendar-view"
+import BigCalendar from "@/components/calendar/BigCalendar"
 
 export default function CalendarPage() {
   return (
@@ -14,7 +14,7 @@ export default function CalendarPage() {
           </Button>
         </div>
       </div>
-      <CalendarView />
+      <BigCalendar />
     </div>
   )
 }

@@ -1,0 +1,109 @@
+{
+  "mcpServers": {
+    "github.com/upstash/context7-mcp": {
+      "autoApprove": [
+        "resolve-library-id"
+      ],
+      "disabled": false,
+      "timeout": 60,
+      "command": "node",
+      "args": [
+        "C:\\Users\\koldbringer\\Documents\\Cline\\MCP\\context7-mcp\\dist\\index.js"
+      ],
+      "transportType": "stdio"
+    },
+    "github.com/zcaceres/fetch-mcp": {
+      "autoApprove": [
+        "fetch_txt",
+        "fetch_markdown"
+      ],
+      "disabled": false,
+      "timeout": 60,
+      "command": "node",
+      "args": [
+        "C:\\Users\\koldbringer\\Documents\\Cline\\MCP\\fetch-mcp\\dist\\index.js"
+      ],
+      "transportType": "stdio"
+    },
+    "github.com/hyperbrowserai/mcp": {
+      "autoApprove": [
+        "scrape_webpage"
+      ],
+      "disabled": false,
+      "timeout": 60,
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        "npx -y hyperbrowser-mcp"
+      ],
+      "env": {
+        "HYPERBROWSER_API_KEY": "hb_f92026e749c17c16f3eda2fa1b7f"
+      },
+      "transportType": "stdio"
+    },
+    "github.com/tavily-ai/tavily-mcp": {
+      "autoApprove": [
+        "tavily-search",
+        "tavily-extract"
+      ],
+      "disabled": false,
+      "timeout": 60,
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        "npx -y tavily-mcp@0.1.4"
+      ],
+      "env": {
+        "TAVILY_API_KEY": "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"
+      },
+      "transportType": "stdio"
+    },
+    "github.com/Operative-Sh/web-eval-agent": {
+      "autoApprove": [
+        "web_eval_agent"
+      ],
+      "disabled": true,
+      "timeout": 60,
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Operative-Sh/web-eval-agent.git",
+        "webEvalAgent.exe"
+      ],
+      "env": {
+        "OPERATIVE_API_KEY": "op-ggCxAmvSGEGgL8SAwOyrLsg18nhnlPP4Yp7pGetRIOI"
+      },
+      "transportType": "stdio"
+    },
+    "github.com/alexander-zuev/supabase-mcp-server": {
+      "autoApprove": [],
+      "disabled": false,
+      "timeout": 60,
+      "command": "C:\\Users\\koldbringer\\pipx\\venvs\\supabase-mcp-server\\Scripts\\supabase-mcp-server.exe",
+      "env": {
+        "SUPABASE_PROJECT_REF": "agttqxgxddftbssmghqi",
+        "SUPABASE_DB_PASSWORD": "blaeritipol",
+        "SUPABASE_REGION": "eu-west-1",
+        "SUPABASE_ACCESS_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndHRxeGd4ZGRmdGJzc21naHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2NTUxOTgsImV4cCI6MjA1OTIzMTE5OH0.skvWV7ReS64SIwnrDiQ4DBk9w0R_HRfcIHVf87AKC98",
+        "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndHRxeGd4ZGRmdGJzc21naHFpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MzY1NTE5OCwiZXhwIjoyMDU5MjMxMTk4fQ.XGuqtPVbsdqtoHI3zwpx-Yf44M4ukhX3gHjhx-cg_7Y"
+      },
+      "transportType": "stdio"
+    },
+    "dart-mcp-server": {
+      "autoApprove": [
+        "create_task",
+        "list_tasks"
+      ],
+      "disabled": false,
+      "timeout": 60,
+      "command": "node",
+      "args": [
+        "C:\\Users\\koldbringer\\Documents\\Cline\\MCP\\dart-mcp-server\\dist\\index.js"
+      ],
+      "env": {
+        "DART_TOKEN": "dsa_d46c55275208922bf703636487497ab4a483312e1d5fb0196c38e3c6f588c12a"
+      },
+      "transportType": "stdio"
+    }
+  }
+}

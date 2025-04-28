@@ -1,13 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { format } from "date-fns"
 import { pl } from "date-fns/locale"
 import { AlertCircle, CheckCircle2, Clock, MoreHorizontal, Package, Plus, Loader2, Calendar } from "lucide-react"
-import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided, DraggableStateSnapshot } from 'react-beautiful-dnd'
+
 import Link from "next/link"
 import { toast } from "sonner"
 import "@/styles/kanban.css"
+
+import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -119,7 +121,7 @@ const fallbackServiceOrdersData: ServiceOrder[] = [
       model: "Daikin FTXM35N",
       type: "Klimatyzator",
     },
-    technicians: null,
+    technicians: undefined,
   },
   {
     id: "SO-002",
@@ -186,6 +188,59 @@ const fallbackServiceOrdersData: ServiceOrder[] = [
 ]
 
 export function ServiceOrdersKanban() {
+  const handleDrop = async (orderId: string, newStatus: string) => {
+    setUpdatingOrder(orderId);
+
+    // Find the order in the current state
+    const orderToMove = serviceOrders.find(order => order.id === orderId);
+    if (!orderToMove) {
+      setUpdatingOrder(null);
+      return;
+    }
+
+    // Optimistically update the state
+    const currentStatus = statusMapping[orderToMove.status];
+    const sourceCol = Array.from(ordersByStatus[currentStatus]);
+    const destCol = Array.from(ordersByStatus[newStatus]);
+
+    const [movedOrder] = sourceCol.filter(order => order.id === orderId);
+    const sourceColFiltered = sourceCol.filter(order => order.id !== orderId);
+
+    movedOrder.status = reverseStatusMapping[newStatus]; // Update status on the moved order object
+    destCol.push(movedOrder); // Add to the new column
+
+    setOrdersByStatus({
+      ...ordersByStatus,
+      [currentStatus]: sourceColFiltered,
+      [newStatus]: destCol,
+    });
+
+    // TODO: Implement database update
+    console.log(`Optimistically updated order ${orderId} status to ${newStatus}`);
+
+    try {
+      // Update in the database
+      await updateServiceOrder(orderId, {
+        status: reverseStatusMapping[newStatus],
+        updated_at: new Date().toISOString()
+      });
+
+      toast.success(`Status zlecenia ${orderId} zmieniony na ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating service order status:', error);
+      toast.error("Błąd podczas aktualizacji statusu zlecenia");
+
+      // Revert the state if the database update fails
+      setOrdersByStatus({
+        ...ordersByStatus,
+        [newStatus]: destCol.filter(order => order.id !== orderId), // Remove from new column
+        [currentStatus]: [...sourceColFiltered, movedOrder], // Add back to original column
+      });
+    } finally {
+      setUpdatingOrder(null);
+    }
+  };
+
   const [serviceOrders, setServiceOrders] = useState<ServiceOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
@@ -247,60 +302,6 @@ export function ServiceOrdersKanban() {
       order.id.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleDragEnd = async (result: DropResult) => {
-    const { source, destination } = result
-    if (!destination) return
-
-    // Pobierz ID przeciąganego zlecenia
-    const orderId = result.draggableId
-    setUpdatingOrder(orderId)
-
-    if (source.droppableId === destination.droppableId) {
-      // Zmiana kolejności w tej samej kolumnie
-      const col = Array.from(ordersByStatus[source.droppableId])
-      const [moved] = col.splice(source.index, 1)
-      col.splice(destination.index, 0, moved)
-      setOrdersByStatus({ ...ordersByStatus, [source.droppableId]: col })
-    } else {
-      // Zmiana statusu zlecenia
-      const sourceCol = Array.from(ordersByStatus[source.droppableId])
-      const [moved] = sourceCol.splice(source.index, 1)
-
-      // Nowy status w formacie bazy danych
-      const newStatus = reverseStatusMapping[destination.droppableId]
-
-      try {
-        // Aktualizacja w bazie danych
-        await updateServiceOrder(orderId, {
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-
-        // Aktualizacja lokalnego stanu
-        moved.status = newStatus
-        const destCol = Array.from(ordersByStatus[destination.droppableId])
-        destCol.splice(destination.index, 0, moved)
-        setOrdersByStatus({
-          ...ordersByStatus,
-          [source.droppableId]: sourceCol,
-          [destination.droppableId]: destCol,
-        })
-
-        toast.success(`Status zlecenia ${orderId} zmieniony na ${destination.droppableId}`)
-      } catch (error) {
-        console.error('Error updating service order status:', error)
-        toast.error("Błąd podczas aktualizacji statusu zlecenia")
-
-        // Przywróć oryginalny stan w przypadku błędu
-        setOrdersByStatus({
-          ...ordersByStatus
-        })
-      } finally {
-        setUpdatingOrder(null)
-      }
-    }
-  }
-
   // Aktualizuj kolumny po filtrowaniu zleceń
   useEffect(() => {
     setOrdersByStatus({
@@ -319,168 +320,188 @@ export function ServiceOrdersKanban() {
   }
 
   // Komponent karty zlecenia
-  const ServiceOrderCard = ({ order }: { order: ServiceOrder }) => (
-    <Card className={`mb-3 ${updatingOrder === order.id ? 'opacity-50' : ''} relative`}>
-      <CardContent className="p-3">
-        <div className="flex justify-between items-start mb-2">
-          <Badge className={getPriorityColor(order.priority)} variant="outline">
-            {getPriorityText(order.priority)}
-          </Badge>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Otwórz menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Akcje</DropdownMenuLabel>
-              <DropdownMenuItem>
-                <Link href={`/service-orders/${order.id}`} className="w-full">Szczegóły zlecenia</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Edytuj zlecenie</DropdownMenuItem>
-              <DropdownMenuItem>Przypisz technika</DropdownMenuItem>
-              <DropdownMenuItem>Dodaj dokumenty</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">Anuluj zlecenie</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+  const ServiceOrderCard = ({ order }: { order: ServiceOrder }) => {
+    const cardRef = useRef<HTMLDivElement>(null);
 
-        <div className="mb-2">
-          <h3 className="font-medium text-sm">{order.title}</h3>
-          <p className="text-xs text-muted-foreground truncate">{order.description}</p>
-        </div>
+    useEffect(() => {
+      const element = cardRef.current;
+      if (!element) return;
 
-        <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-          <div>
-            <p className="text-muted-foreground">Klient:</p>
-            <p className="font-medium truncate">{order.customers?.name || "Nieznany"}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Lokalizacja:</p>
-            <p className="font-medium truncate">{order.sites?.name || "Nieznana"}</p>
-          </div>
-        </div>
+      return draggable({
+        element: element,
+        getInitialData: () => ({
+          orderId: order.id,
+          currentStatus: statusMapping[order.status],
+          type: 'service-order', // Define a type for the draggable item
+        }),
+      });
+    }, [order.id, order.status]); // Re-run effect if order ID or status changes
 
-        <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-          <div>
-            <p className="text-muted-foreground">Urządzenie:</p>
-            <p className="font-medium truncate">{order.devices?.model || "Nieznane"}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Technik:</p>
-            <p className="font-medium truncate">{order.technicians?.name || "Nieprzypisany"}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3 text-muted-foreground" />
-            <span>{formatDate(order.scheduled_date)}</span>
-          </div>
-          <div>
-            <Badge variant="outline" className="text-xs">
-              {order.type === "maintenance" ? "Przegląd" :
-               order.type === "repair" ? "Naprawa" :
-               order.type === "installation" ? "Montaż" :
-               order.type}
+    return (
+      <Card ref={cardRef} className={`mb-3 ${updatingOrder === order.id ? 'opacity-50' : ''} relative`}>
+        <CardContent className="p-3">
+          <div className="flex justify-between items-start mb-2">
+            <Badge className={getPriorityColor(order.priority)} variant="outline">
+              {getPriorityText(order.priority)}
             </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Otwórz menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Akcje</DropdownMenuLabel>
+                <DropdownMenuItem>
+                  <Link href={`/service-orders/${order.id}`} className="w-full">Szczegóły zlecenia</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Edytuj zlecenie</DropdownMenuItem>
+                <DropdownMenuItem>Przypisz technika</DropdownMenuItem>
+                <DropdownMenuItem>Dodaj dokumenty</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-red-600">Anuluj zlecenie</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </div>
 
-        {updatingOrder === order.id && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-md">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <div className="mb-2">
+            <h3 className="font-medium text-sm">{order.title}</h3>
+            <p className="text-xs text-muted-foreground truncate">{order.description}</p>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  )
+
+          <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+            <div>
+              <p className="text-muted-foreground">Klient:</p>
+              <p className="font-medium truncate">{order.customers?.name || "Nieznany"}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Lokalizacja:</p>
+              <p className="font-medium truncate">{order.sites?.name || "Nieznana"}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+            <div>
+              <p className="text-muted-foreground">Urządzenie:</p>
+              <p className="font-medium truncate">{order.devices?.model || "Nieznane"}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Technik:</p>
+              <p className="font-medium truncate">{order.technicians?.name || "Nieprzypisany"}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3 text-muted-foreground" />
+              <span>{formatDate(order.scheduled_date)}</span>
+            </div>
+            <div>
+              <Badge variant="outline" className="text-xs">
+                {order.type === "maintenance" ? "Przegląd" :
+                 order.type === "repair" ? "Naprawa" :
+                 order.type === "installation" ? "Montaż" :
+                 order.type}
+              </Badge>
+            </div>
+          </div>
+
+          {updatingOrder === order.id && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-md">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="space-y-4">
-        <div className="flex w-full max-w-sm items-center space-x-2">
-          <Input
-            placeholder="Szukaj zlecenia..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+    <div className="space-y-4">
+      <div className="flex w-full max-w-sm items-center space-x-2">
+        <Input
+          placeholder="Szukaj zlecenia..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="space-y-2">
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-6 w-8" />
+              </div>
+              <div className="bg-muted/50 p-2 rounded-md min-h-[500px]">
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <Skeleton key={j} className="h-32 w-full mb-3" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {Object.entries(ordersByStatus).map(([status, orders]) => {
+            const columnRef = useRef<HTMLDivElement>(null);
+
+            useEffect(() => {
+              const element = columnRef.current;
+              if (!element) return;
+
+              return dropTargetForElements({
+                element: element,
+                getData: () => ({ newStatus: status, type: 'status-column' }), // Data for the drop target
+                canDrop: ({ source }) => source.data.type === 'service-order', // Only allow dropping service orders
+                onDrop: ({ source }) => {
+                  // Handle the drop event
+                  const orderId = source.data.orderId as string;
+                  const newStatus = status as string;
+                  handleDrop(orderId, newStatus); // Call a new handler for drop logic
+                },
+              });
+            }, [status]); // Re-run effect if status changes
+
+            return (
+              <div className="space-y-2" key={status} ref={columnRef}>
                 <div className="flex items-center justify-between">
-                  <Skeleton className="h-6 w-24" />
-                  <Skeleton className="h-6 w-8" />
+                  <div className="flex items-center gap-2">
+                    {status === "new" && <AlertCircle className="h-4 w-4 text-yellow-500" />}
+                    {status === "in-progress" && <Clock className="h-4 w-4 text-blue-500" />}
+                    {status === "scheduled" && <Calendar className="h-4 w-4 text-purple-500" />}
+                    {status === "completed" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                    {status === "cancelled" && <AlertCircle className="h-4 w-4 text-red-500" />}
+                    <h3 className="font-medium">
+                      {status === "new" ? "Nowe" :
+                       status === "in-progress" ? "W trakcie" :
+                       status === "scheduled" ? "Zaplanowane" :
+                       status === "completed" ? "Zakończone" :
+                       status === "cancelled" ? "Anulowane" :
+                       status.charAt(0).toUpperCase() + status.slice(1)}
+                    </h3>
+                  </div>
+                  <Badge variant="outline">{orders.length}</Badge>
                 </div>
-                <div className="bg-muted/50 p-2 rounded-md min-h-[500px]">
-                  {Array.from({ length: 3 }).map((_, j) => (
-                    <Skeleton key={j} className="h-32 w-full mb-3" />
-                  ))}
+                <div className="bg-muted/50 p-2 rounded-md min-h-[500px] relative">
+                  {orders.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-20 text-center text-muted-foreground">
+                      <p className="text-sm">Brak zleceń</p>
+                    </div>
+                  ) : (
+                    orders.map((order, index) => (
+                      <ServiceOrderCard order={order} key={order.id} />
+                    ))
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {Object.entries(ordersByStatus).map(([status, orders]) => (
-              <Droppable droppableId={status} key={status}>
-                {(provided: DroppableProvided) => (
-                  <div className="space-y-2" ref={provided.innerRef} {...provided.droppableProps}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {status === "new" && <AlertCircle className="h-4 w-4 text-yellow-500" />}
-                        {status === "in-progress" && <Clock className="h-4 w-4 text-blue-500" />}
-                        {status === "scheduled" && <Calendar className="h-4 w-4 text-purple-500" />}
-                        {status === "completed" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                        {status === "cancelled" && <AlertCircle className="h-4 w-4 text-red-500" />}
-                        <h3 className="font-medium">
-                          {status === "new" ? "Nowe" :
-                           status === "in-progress" ? "W trakcie" :
-                           status === "scheduled" ? "Zaplanowane" :
-                           status === "completed" ? "Zakończone" :
-                           status === "cancelled" ? "Anulowane" :
-                           status.charAt(0).toUpperCase() + status.slice(1)}
-                        </h3>
-                      </div>
-                      <Badge variant="outline">{orders.length}</Badge>
-                    </div>
-                    <div className="bg-muted/50 p-2 rounded-md min-h-[500px] relative">
-                      {orders.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-20 text-center text-muted-foreground">
-                          <p className="text-sm">Brak zleceń</p>
-                        </div>
-                      ) : (
-                        orders.map((order, index) => (
-                          <Draggable key={order.id} draggableId={order.id} index={index}>
-                            {(prov: DraggableProvided, snap: DraggableStateSnapshot) => (
-                              <div
-                                ref={prov.innerRef}
-                                {...prov.draggableProps}
-                                {...prov.dragHandleProps}
-                                className={`draggable-item react-beautiful-dnd-draggable ${snap.isDragging ? 'is-dragging' : ''}`}
-                                style={prov.draggableProps.style}
-                              >
-                                <ServiceOrderCard order={order} />
-                              </div>
-                            )}
-                          </Draggable>
-                        ))
-                      )}
-                      {provided.placeholder}
-                    </div>
-                  </div>
-                )}
-              </Droppable>
-            ))}
-          </div>
-        )}
-      </div>
-    </DragDropContext>
+            );
+          })}
+        </div>
+      )}
+    </div>
   )
 }

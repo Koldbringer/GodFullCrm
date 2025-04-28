@@ -65,7 +65,7 @@ export async function getCustomers({
     console.error('Error fetching customers:', error);
     return { data: [], count: 0 };
   }
-  return { data, count };
+  return {  count };
 }
 
 export async function getCustomerById(id: string, includeRelated: boolean = false) {

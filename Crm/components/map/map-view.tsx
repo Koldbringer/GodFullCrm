@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet"
+import MarkerClusterGroup from "react-leaflet-markercluster"
+import 'react-leaflet-markercluster/styles';
 import { Icon, LatLngExpression } from "leaflet"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -282,33 +284,37 @@ export function MapView({
                   />
                   <MapControls center={center} />
                   
-                  {locations.map((location) => (
-                    <Marker
-                      key={location.id}
-                      position={[location.coordinates.lat, location.coordinates.lng]}
-                      icon={getMarkerIcon(location.type, location.status)}
-                      eventHandlers={{
-                        click: () => handleMarkerClick(location),
-                      }}
-                    >
-                      <Popup>
-                        <div className="p-1">
-                          <div className="font-medium">{location.name}</div>
-                          {location.address && (
-                            <div className="text-sm text-muted-foreground">{location.address}</div>
-                          )}
-                          {location.status && (
-                            <Badge 
-                              variant="outline" 
-                              className={`mt-1 ${getStatusBadgeColor(location.status)} text-white`}
-                            >
-                              {location.status}
-                            </Badge>
-                          )}
-                        </div>
-                      </Popup>
-                    </Marker>
-                  ))}
+                  <MarkerClusterGroup
+                    chunkedLoading
+                  >
+                    {locations.map((location) => (
+                      <Marker
+                        key={location.id}
+                        position={[location.coordinates.lat, location.coordinates.lng]}
+                        icon={getMarkerIcon(location.type, location.status)}
+                        eventHandlers={{
+                          click: () => handleMarkerClick(location),
+                        }}
+                      >
+                        <Popup>
+                          <div className="p-1">
+                            <div className="font-medium">{location.name}</div>
+                            {location.address && (
+                              <div className="text-sm text-muted-foreground">{location.address}</div>
+                            )}
+                            {location.status && (
+                              <Badge
+                                variant="outline"
+                                className={`mt-1 ${getStatusBadgeColor(location.status)} text-white`}
+                              >
+                                {location.status}
+                              </Badge>
+                            )}
+                          </div>
+                        </Popup>
+                      </Marker>
+                    ))}
+                  </MarkerClusterGroup>
                 </MapContainer>
               )}
             </div>

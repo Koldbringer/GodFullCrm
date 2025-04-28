@@ -39,6 +39,10 @@ export function Header({ className }: HeaderProps) {
       <div className="flex items-center gap-4 lg:gap-6">
         {/* Breadcrumbs for navigation context */}
         <Breadcrumbs />
+        {/* Documentation Link */}
+        <Link href="/docs" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+          Dokumentacja
+        </Link>
       </div>
 
       <div className="flex items-center gap-4">

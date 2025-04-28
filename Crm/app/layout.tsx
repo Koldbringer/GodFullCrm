@@ -6,6 +6,7 @@ import { I18nProvider } from "@/components/i18n/i18n-provider"
 import { Providers } from "@/components/providers/Providers"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
+import { MsalClientProvider } from "@/components/providers/MsalClientProvider";
 
 export const metadata: Metadata = {
   title: 'GodLike HVAC CRM ERP',
@@ -20,21 +21,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pl" suppressHydrationWarning>
-      <body className="min-h-screen bg-background">
-        <Providers>
-          <I18nProvider>
-            <NextThemesProvider>
-              <div className="flex min-h-screen">
-                <Sidebar />
-                <div className="flex-1 flex flex-col">
-                  <Header />
-                  <main className="flex-1 p-4 pt-6">{children}</main>
+      <body>
+        <MsalClientProvider>
+          <Providers>
+            <I18nProvider>
+              <NextThemesProvider>
+                <div className="layout-root" style={{ display: 'flex' }}>
+                  <Sidebar className="sidebar" />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <Header className="header" />
+                    <main className="main-content">{children}</main>
+                  </div>
                 </div>
-              </div>
-            </NextThemesProvider>
-          </I18nProvider>
-        </Providers>
-        <Toaster />
+              </NextThemesProvider>
+            </I18nProvider>
+          </Providers>
+          <Toaster />
+        </MsalClientProvider>
       </body>
     </html>
   )
