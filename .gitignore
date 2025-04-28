@@ -1,3 +1,24 @@
+# Ignore everything
+/*
+
+# Except the Crm folder
+!Crm/
+
+# But still ignore everything inside Crm, unless explicitly allowed
+Crm/*
+
+# Allow all content inside Crm
+!Crm/**
+
+# (Optional) Ignore system files, IDE files, etc.
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+node_modules/
+.env
+*.log
+
 # dependencies
 /node_modules
 /.pnp
@@ -14,7 +35,6 @@
 /build
 
 # misc
-.DS_Store
 *.pem
 
 # debug
