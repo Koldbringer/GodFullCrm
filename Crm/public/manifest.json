@@ -78,6 +78,13 @@
       "description": "Przejdź do listy klientów",
       "url": "/customers",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mapa Offline",
+      "short_name": "Mapa Offline",
+      "description": "Przejdź do mapy dostępnej offline",
+      "url": "/map/offline",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": [
@@ -94,6 +101,13 @@
       "type": "image/png",
       "form_factor": "wide",
       "label": "Zgłoszenia serwisowe w GodLike CRM"
+    },
+    {
+      "src": "/screenshots/offline-map.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Mapa offline w GodLike CRM"
     }
   ]
 }

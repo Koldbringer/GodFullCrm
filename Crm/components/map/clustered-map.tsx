@@ -136,6 +136,8 @@ interface ClusteredMapProps {
   className?: string
   mapType?: "standard" | "satellite" | "terrain"
   onMapTypeChange?: (type: "standard" | "satellite" | "terrain") => void
+  offlineMode?: boolean
+  onMapBoundsChange?: (bounds: any) => void
 }
 
 export function ClusteredMap({
@@ -149,9 +151,12 @@ export function ClusteredMap({
   height = "600px",
   className = "",
   mapType = "standard",
-  onMapTypeChange
+  onMapTypeChange,
+  offlineMode = false,
+  onMapBoundsChange
 }: ClusteredMapProps) {
   const [mapReady, setMapReady] = useState(false)
+  const mapRef = useRef<any>(null)
   
   // Fix for Leaflet marker icons in Next.js
   useEffect(() => {
@@ -168,8 +173,35 @@ export function ClusteredMap({
     setMapReady(true)
   }, [])
   
-  // Get map tile layer based on map type
+  // Update map bounds when the map moves
+  useEffect(() => {
+    if (mapRef.current && onMapBoundsChange) {
+      const map = mapRef.current;
+      const updateBounds = () => {
+        const bounds = map.getBounds();
+        onMapBoundsChange(bounds);
+      };
+      
+      map.on('moveend', updateBounds);
+      map.on('zoomend', updateBounds);
+      
+      // Initial bounds
+      updateBounds();
+      
+      return () => {
+        map.off('moveend', updateBounds);
+        map.off('zoomend', updateBounds);
+      };
+    }
+  }, [mapRef.current, onMapBoundsChange]);
+  
+  // Get map tile layer based on map type and offline mode
   const getTileLayer = () => {
+    // In offline mode, always use the standard map (which we'll assume is cached)
+    if (offlineMode) {
+      return "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    }
+    
     switch (mapType) {
       case "satellite":
         return "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
@@ -212,9 +244,12 @@ export function ClusteredMap({
               zoom={zoom}
               style={{ height: "100%", width: "100%" }}
               className="z-0"
+              whenCreated={(map) => {
+                mapRef.current = map;
+              }}
             >
               <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                attribution={offlineMode ? 'Offline Map Data' : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
                 url={getTileLayer()}
               />
               <MapControls center={center} />

@@ -7,6 +7,7 @@ import { Providers } from "@/components/providers/Providers"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { MsalClientProvider } from "@/components/providers/MsalClientProvider";
+import { RegisterServiceWorker } from "./register-sw";
 
 export const metadata: Metadata = {
   title: 'GodLike HVAC CRM ERP',
@@ -22,7 +23,8 @@ export default function RootLayout({
   return (
     <html lang="pl" suppressHydrationWarning>
       <body>
-        <MsalClientProvider>
+        {/* Temporarily disabled MsalClientProvider due to crypto error */}
+        {/* <MsalClientProvider> */}
           <Providers>
             <I18nProvider>
               <NextThemesProvider>
@@ -37,7 +39,8 @@ export default function RootLayout({
             </I18nProvider>
           </Providers>
           <Toaster />
-        </MsalClientProvider>
+          <RegisterServiceWorker />
+        {/* </MsalClientProvider> */}
       </body>
     </html>
   )
