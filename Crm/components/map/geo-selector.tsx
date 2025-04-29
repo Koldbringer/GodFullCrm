@@ -140,16 +140,19 @@ export function GeoSelector({
   
   // Fix for Leaflet marker icons in Next.js
   useEffect(() => {
-    const L = require("leaflet")
-    
-    delete L.Icon.Default.prototype._getIconUrl
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
-      iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-      shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-    })
-    
-    setMapReady(true)
+    // Only import Leaflet on the client side
+    if (typeof window !== 'undefined') {
+      const L = require("leaflet")
+      
+      delete L.Icon.Default.prototype._getIconUrl
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+        iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+      })
+      
+      setMapReady(true)
+    }
   }, [])
   
   return (
@@ -204,7 +207,7 @@ export function GeoSelector({
         )}
         
         <div style={{ height, width: "100%" }} className="relative rounded-md overflow-hidden border">
-          {mapReady && (
+          {typeof window !== 'undefined' && mapReady ? (
             <MapContainer
               center={initialLocation ? [initialLocation.lat, initialLocation.lng] : DEFAULT_CENTER}
               zoom={DEFAULT_ZOOM}
@@ -222,9 +225,7 @@ export function GeoSelector({
                 />
               )}
             </MapContainer>
-          )}
-          
-          {!mapReady && (
+          ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-muted">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
