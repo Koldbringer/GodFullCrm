@@ -1,17 +1,18 @@
 FROM node:18-alpine AS builder
 
+# Set working directory to match the Crm folder structure
 WORKDIR /app
 
-# Copy package.json and package-lock.json
+# Copy only the Crm folder's package.json and package-lock.json
 COPY Crm/package*.json ./
 
 # Install dependencies
 RUN npm install --legacy-peer-deps
 
-# Install additional dependencies
+# Install additional dependencies that might be missing
 RUN npm install --legacy-peer-deps react-beautiful-dnd fumadocs-core
 
-# Copy the application code
+# Copy only the Crm folder contents
 COPY Crm/ ./
 
 # Create a minimal next.config.mjs that enables static export
