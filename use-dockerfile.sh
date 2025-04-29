@@ -13,7 +13,18 @@ fi
 # Create a backup of the current Dockerfile
 cp Dockerfile Dockerfile.bak 2>/dev/null || true
 
-if [ "$1" == "production" ]; then
+if [ "$1" == "api-fix" ]; then
+  echo "Switching to API-fixed Dockerfile..."
+  if [ -f "Dockerfile.api-fix" ]; then
+    cp Dockerfile.api-fix Dockerfile
+  else
+    echo "No API-fixed Dockerfile found. Please create one first."
+    exit 1
+  fi
+  # Update docker-compose.yml for production
+  sed -i 's/NODE_ENV=development/NODE_ENV=production/g' docker-compose.yml
+  echo "Done. API-fixed Dockerfile is now active."
+elif [ "$1" == "production" ]; then
   echo "Switching to production Dockerfile..."
   if [ -f "Dockerfile.production" ]; then
     cp Dockerfile.production Dockerfile
@@ -135,8 +146,9 @@ EOF
   sed -i 's/NODE_ENV=production/NODE_ENV=development/g' docker-compose.yml
   echo "Done. Minimal Dockerfile is now active."
 else
-  echo "Usage: $0 [production|development|static|minimal|save-production]"
+  echo "Usage: $0 [production|api-fix|development|static|minimal|save-production]"
   echo "  production: Use the production-optimized Dockerfile"
+  echo "  api-fix: Use the production Dockerfile with API route fixes"
   echo "  development: Use the development server Dockerfile"
   echo "  static: Use the static export Dockerfile"
   echo "  minimal: Use the minimal development Dockerfile"

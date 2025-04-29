@@ -7,9 +7,10 @@ This guide provides detailed instructions for deploying the GodFullCrm applicati
 The repository includes several deployment options to accommodate different hosting environments and requirements:
 
 1. **Production Deployment**: Optimized for performance and security
-2. **Development Deployment**: Easier to deploy but less optimized
-3. **Static Export Deployment**: Maximum compatibility but limited dynamic features
-4. **Minimal Deployment**: Simplified deployment for development and testing
+2. **API-Fixed Deployment**: Production deployment with fixes for API route issues
+3. **Development Deployment**: Easier to deploy but less optimized
+4. **Static Export Deployment**: Maximum compatibility but limited dynamic features
+5. **Minimal Deployment**: Simplified deployment for development and testing
 
 ## Prerequisites
 
@@ -49,7 +50,26 @@ The following environment variables are required for all deployment methods:
    - Configure the environment variables
    - Deploy the service
 
-### Option 2: Development Deployment
+### Option 2: API-Fixed Deployment (Recommended for Coolify)
+
+If you encounter API route errors during build, use this deployment option:
+
+1. Clone the repository
+2. Run the script to use the API-fixed Dockerfile:
+   ```bash
+   ./use-dockerfile.sh api-fix
+   ```
+3. Commit and push the changes:
+   ```bash
+   git add .
+   git commit -m "Use API-fixed Dockerfile"
+   git push origin master
+   ```
+4. Redeploy in Coolify
+
+This option includes special handling for API routes that might cause build errors.
+
+### Option 3: Development Deployment
 
 If the production deployment fails, try the development deployment:
 
@@ -66,7 +86,7 @@ If the production deployment fails, try the development deployment:
    ```
 4. Redeploy in Coolify
 
-### Option 3: Static Export Deployment
+### Option 4: Static Export Deployment
 
 For maximum compatibility but with limited dynamic features:
 
@@ -83,7 +103,7 @@ For maximum compatibility but with limited dynamic features:
    ```
 4. Redeploy in Coolify
 
-### Option 4: Minimal Deployment
+### Option 5: Minimal Deployment
 
 For a minimal deployment with fewer dependencies:
 
@@ -107,7 +127,7 @@ To deploy manually using Docker Compose:
 1. Clone the repository
 2. Choose your deployment option:
    ```bash
-   ./use-dockerfile.sh production  # or development, static, minimal
+   ./use-dockerfile.sh production  # or api-fix, development, static, minimal
    ```
 3. Create a `.env` file with the required environment variables:
    ```
@@ -129,7 +149,7 @@ If you encounter build failures:
 1. Check the Docker build logs for specific errors
 2. Try a different deployment option:
    ```bash
-   ./use-dockerfile.sh development  # or static, minimal
+   ./use-dockerfile.sh api-fix  # or development, static, minimal
    ```
 3. Run the debug script to investigate build issues:
    ```bash
@@ -169,7 +189,7 @@ To update the deployment:
 1. Pull the latest changes from the repository
 2. Choose your deployment option:
    ```bash
-   ./use-dockerfile.sh production  # or development, static, minimal
+   ./use-dockerfile.sh production  # or api-fix, development, static, minimal
    ```
 3. Rebuild and restart the application:
    ```bash

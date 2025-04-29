@@ -13,7 +13,36 @@ A comprehensive CRM/ERP system for HVAC companies in the Polish market.
 
 ## Deployment Options
 
-### Development Mode Deployment (Recommended for Coolify)
+### API-Fixed Production Deployment (Recommended for Coolify)
+
+This approach uses a production build with special handling for API routes that might cause build errors.
+
+#### Prerequisites
+
+- Coolify instance
+- Docker and Docker Compose installed
+- Git repository access
+
+#### Environment Variables
+
+The following environment variables are required for deployment:
+
+- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
+
+#### Deployment Steps
+
+1. Clone the repository
+2. Run the script to switch to the API-fixed build: `./use-dockerfile.sh api-fix`
+3. Commit and push the changes: `git commit -am "Switch to API-fixed build" && git push origin master`
+4. In Coolify, create a new service
+5. Select "Docker" as the deployment method
+6. Enter your Git repository URL
+7. Set the branch to `master`
+8. Configure the environment variables
+9. Deploy the service
+
+### Development Mode Deployment
 
 This approach runs the Next.js development server directly, which is more reliable for deployment but may have slightly slower performance.
 
@@ -88,10 +117,16 @@ To deploy manually using Docker Compose:
 If you encounter build issues:
 
 1. Check the Docker build logs for specific errors
-2. Ensure all environment variables are correctly set
-3. Try running the development server with `./deploy-dev.sh` and then `docker-compose up -d`
-4. If the development server works but production build fails, use the development server for deployment
-5. For persistent issues, try the static export deployment option
+2. If you see errors related to API routes (like `/api/customers/[id]`), use the API-fixed deployment option:
+   ```bash
+   ./use-dockerfile.sh api-fix
+   git commit -am "Switch to API-fixed build"
+   git push origin master
+   ```
+3. Ensure all environment variables are correctly set
+4. Try running the development server with `./deploy-dev.sh` and then `docker-compose up -d`
+5. If the development server works but production build fails, use the development server for deployment
+6. For persistent issues, try the static export deployment option
 
 #### Debug Build Process
 

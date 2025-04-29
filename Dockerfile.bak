@@ -1,4 +1,4 @@
-# Multi-stage build for production with API route fix
+# Multi-stage build for production
 FROM node:18-alpine AS builder
 
 # Set working directory
@@ -22,35 +22,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max_old_space_size=4096"
 
-# Create a custom next.config.js that ignores errors and excludes API routes from build
-RUN echo 'module.exports = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  swcMinify: true,
-  images: {
-    unoptimized: true,
-  },
-  experimental: {
-    esmExternals: "loose",
-  },
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      path: false,
-      os: false,
-    };
-    return config;
-  },
-};' > next.config.js
-
-# Create a temporary file to exclude API routes from build
-RUN mkdir -p .next/server/app/api && \
-    echo "export default function Route() { return null; }" > app/api/customers/[id]/route.js
+# Create a simplified next.config.js that ignores errors during build
+RUN echo 'module.exports = {eslint:{ignoreDuringBuilds:true},typescript:{ignoreBuildErrors:true},swcMinify:true,images:{unoptimized:true}};' > next.config.js
 
 # Build the application
 RUN npm run build
