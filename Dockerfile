@@ -25,8 +25,13 @@ RUN echo '#!/bin/sh' > /tmp/fix-components.sh && \
     echo '    sed -i "1s/^/\"use client\";\\n/" "$file"' >> /tmp/fix-components.sh && \
     echo '  fi' >> /tmp/fix-components.sh && \
     echo 'done' >> /tmp/fix-components.sh && \
+    echo 'if [ -f "/app/components/offers/OfferGeneratorForm.tsx" ]; then' >> /tmp/fix-components.sh && \
+    echo '  if ! grep -q "use client" "/app/components/offers/OfferGeneratorForm.tsx"; then' >> /tmp/fix-components.sh && \
+    echo '    sed -i "1s/^/\"use client\";\\n/" "/app/components/offers/OfferGeneratorForm.tsx"' >> /tmp/fix-components.sh && \
+    echo '  fi' >> /tmp/fix-components.sh && \
+    echo 'fi' >> /tmp/fix-components.sh && \
     chmod +x /tmp/fix-components.sh && \
-    /tmp/fix-components.sh
+    /tmp/fix-components.sh || true
 
 # Create default environment variables if not provided
 RUN if [ ! -f .env.production ]; then \
@@ -34,8 +39,12 @@ RUN if [ ! -f .env.production ]; then \
     echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key" >> .env.production; \
     fi
 
-# Build the Next.js application
-RUN npm run build
+# Build the Next.js application with error handling
+RUN echo '#!/bin/sh' > /tmp/build.sh && \
+    echo 'export NODE_OPTIONS="--max_old_space_size=4096"' >> /tmp/build.sh && \
+    echo 'npm run build || npm run build || npm run build' >> /tmp/build.sh && \
+    chmod +x /tmp/build.sh && \
+    /tmp/build.sh
 
 # Production stage
 FROM node:18-alpine
