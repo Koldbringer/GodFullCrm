@@ -6,13 +6,21 @@ WORKDIR /app
 
 # Copy package files from Crm directory
 COPY Crm/package*.json ./
-COPY Crm/.npmrc ./ 2>/dev/null || true
+# Create empty .npmrc if it doesn't exist
+RUN touch .npmrc
 
 # Install dependencies with legacy peer deps for compatibility
 RUN npm ci --legacy-peer-deps
 
-# Copy the entire Crm directory
+# Install missing dependencies
+RUN npm install --legacy-peer-deps react-beautiful-dnd fumadocs-core
+
+# Copy the entire Crm directory and the use client script
 COPY Crm/ ./
+COPY add-use-client.sh /tmp/add-use-client.sh
+
+# Fix React components by adding "use client" directive
+RUN chmod +x /tmp/add-use-client.sh && /tmp/add-use-client.sh
 
 # Create default environment variables if not provided
 RUN if [ ! -f .env.production ]; then \
@@ -27,7 +35,7 @@ RUN npm run build
 FROM node:18-alpine
 
 WORKDIR /app
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Copy build artifacts from builder stage
 COPY --from=builder /app/.next ./.next
