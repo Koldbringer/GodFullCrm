@@ -15,12 +15,18 @@ RUN npm ci --legacy-peer-deps
 # Install missing dependencies
 RUN npm install --legacy-peer-deps react-beautiful-dnd fumadocs-core
 
-# Copy the entire Crm directory and the use client script
+# Copy the entire Crm directory
 COPY Crm/ ./
-COPY add-use-client.sh /tmp/add-use-client.sh
 
-# Fix React components by adding "use client" directive
-RUN chmod +x /tmp/add-use-client.sh && /tmp/add-use-client.sh
+# Create a script to add "use client" directive to component files
+RUN echo '#!/bin/sh' > /tmp/fix-components.sh && \
+    echo 'for file in $(find /app/components -type f -name "*.tsx" | xargs grep -l "useState\|useEffect\|useContext\|useReducer\|useCallback\|useMemo\|useRef\|useImperativeHandle\|useLayoutEffect\|useDebugValue"); do' >> /tmp/fix-components.sh && \
+    echo '  if ! grep -q "use client" "$file"; then' >> /tmp/fix-components.sh && \
+    echo '    sed -i "1s/^/\"use client\";\\n/" "$file"' >> /tmp/fix-components.sh && \
+    echo '  fi' >> /tmp/fix-components.sh && \
+    echo 'done' >> /tmp/fix-components.sh && \
+    chmod +x /tmp/fix-components.sh && \
+    /tmp/fix-components.sh
 
 # Create default environment variables if not provided
 RUN if [ ! -f .env.production ]; then \
