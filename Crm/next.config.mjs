@@ -1,6 +1,6 @@
-// import { createMDX } from 'fumadocs-mdx/next';
+import { createMDX } from 'fumadocs-mdx/next';
 
-// const withMDX = createMDX();
+const withMDX = createMDX();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -13,7 +13,26 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Enable standalone output for Docker optimization
+  output: 'standalone',
+  // Allow CORS and iframe embedding for Coolify
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'ALLOWALL',
+          },
+        ],
+      },
+    ];
+  },
 }
 
-// export default withMDX(nextConfig);
-export default nextConfig;
+export default withMDX(nextConfig);

@@ -1,26 +1,54 @@
-# This is a wrapper Dockerfile that uses the Crm Dockerfile
+# Optimized Dockerfile for Coolify deployment
 FROM node:18-alpine AS builder
 
+# Set working directory
 WORKDIR /app
+
+# Install dependencies based on the preferred package manager
 COPY Crm/package*.json ./
 RUN npm ci --legacy-peer-deps
 
+# Copy app source
 COPY Crm/ .
+
+# Add missing dependencies
+RUN npm install --legacy-peer-deps react-beautiful-dnd fumadocs-core
+
+# Build the app
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
+# Production image, copy all the files and run next
+FROM node:18-alpine AS runner
 
 WORKDIR /app
-ENV NODE_ENV production
 
-COPY --from=builder /app/.next ./.next
+# Set production environment
+ENV NODE_ENV=production
+
+# Create a non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy necessary files from builder
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/next.config.mjs ./
 COPY --from=builder /app/next-i18next.config.js ./
 
-RUN npm ci --legacy-peer-deps --omit=dev
+# Set the correct permission for prerender cache
+RUN mkdir -p .next/cache
+RUN chown -R nextjs:nodejs .next
+RUN chmod -R 775 .next
 
+# Switch to non-root user
+USER nextjs
+
+# Expose the listening port
 EXPOSE 3000
-CMD ["npm", "start"]
+
+# Set healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Run the app
+CMD ["node", "server.js"]
