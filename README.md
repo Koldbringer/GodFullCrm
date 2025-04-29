@@ -44,6 +44,17 @@ If you encounter build issues:
 3. Verify that the Dockerfile is properly configured
 4. Check that the Next.js application is properly configured
 
+#### Alternative Static Build
+
+If you're still experiencing issues with the standard build, you can use the static export build:
+
+1. Clone the repository
+2. Run the script to switch to the static build: `./use-static-build.sh`
+3. Commit and push the changes: `git commit -am "Switch to static build" && git push origin master`
+4. Redeploy in Coolify
+
+The static build uses Nginx to serve pre-rendered static HTML files, which can be more reliable but has some limitations with dynamic features.
+
 ## Development
 
 ### Setup
