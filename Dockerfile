@@ -17,17 +17,11 @@ RUN echo "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co" > .env.productio
     echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key" >> .env.production
 
 # Set environment variables
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 ENV NODE_OPTIONS="--max_old_space_size=4096"
-
-# Make build-debug.js executable
-RUN chmod +x build-debug.js
-
-# Build the application using the build-debug.js script
-RUN node build-debug.js
 
 # Expose the listening port
 EXPOSE 3000
 
-# Run the application
-CMD ["npx", "next", "start"]
+# Run the development server instead of building
+CMD ["npm", "run", "dev", "--", "-p", "3000", "--hostname", "0.0.0.0"]
