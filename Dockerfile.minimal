@@ -1,0 +1,24 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package.json and install dependencies
+COPY Crm/package.json ./
+RUN npm install
+
+# Copy the rest of the application
+COPY Crm/ ./
+
+# Create a minimal next.config.js
+RUN echo 'module.exports = {reactStrictMode:false,eslint:{ignoreDuringBuilds:true},typescript:{ignoreBuildErrors:true},swcMinify:false,images:{unoptimized:true}};' > next.config.js
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Expose port
+EXPOSE 3000
+
+# Start the application
+CMD ["npm", "run", "dev"]

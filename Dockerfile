@@ -26,11 +26,11 @@ RUN find ./components -type f -name "*.tsx" -exec sed -i '1s/^/"use client";\n/'
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max_old_space_size=4096"
 
-# Build the application
-RUN npm run build:original || exit 1
+# Build the application using npx directly
+RUN npx next build
 
 # Expose the listening port
 EXPOSE 3000
 
 # Run the application
-CMD ["npm", "start"]
+CMD ["npx", "next", "start"]
