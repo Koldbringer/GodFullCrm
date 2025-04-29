@@ -227,12 +227,12 @@ export default async function OfflineMapPage({
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
   // Extract filter parameters from URL - convert to proper types
-  const district = typeof searchParams.district === 'string' ? searchParams.district : undefined
-  const limitStr = typeof searchParams.limit === 'string' ? searchParams.limit : '100'
+  const district = searchParams?.district && typeof searchParams.district === 'string' ? searchParams.district : undefined
+  const limitStr = searchParams?.limit && typeof searchParams.limit === 'string' ? searchParams.limit : '100'
   const limit = parseInt(limitStr) || 100
-  const customerType = typeof searchParams.customerType === 'string' ? searchParams.customerType : undefined
-  const siteType = typeof searchParams.siteType === 'string' ? searchParams.siteType : undefined
-  const serviceStatus = typeof searchParams.serviceStatus === 'string' ? searchParams.serviceStatus : undefined
+  const customerType = searchParams?.customerType && typeof searchParams.customerType === 'string' ? searchParams.customerType : undefined
+  const siteType = searchParams?.siteType && typeof searchParams.siteType === 'string' ? searchParams.siteType : undefined
+  const serviceStatus = searchParams?.serviceStatus && typeof searchParams.serviceStatus === 'string' ? searchParams.serviceStatus : undefined
 
   // Get data with filters
   const {
