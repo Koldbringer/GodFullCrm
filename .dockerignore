@@ -1,12 +1,20 @@
+# Ignore everything by default
+*
+
+# Allow specific directories and files
+!Crm/
+!add-use-client.sh
+!next.config.mjs
+
 # Dependencies
-node_modules
+Crm/node_modules
 **/node_modules
 .pnpm-store
 
 # Next.js build output
-.next
+Crm/.next
 **/.next
-out
+Crm/out
 **/out
 
 # Version control
@@ -22,6 +30,7 @@ out
 **/.env.*
 !.env.example
 !**/.env.example
+!.env.production
 
 # Logs
 logs
@@ -53,12 +62,3 @@ build
 tmp
 temp
 .cache
-.env*.local
-.env
-.DS_Store
-*.md
-*.log
-dist
-coverage
-.vscode
-.idea
