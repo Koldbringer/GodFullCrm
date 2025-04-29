@@ -121,17 +121,21 @@ async function handleMapTileRequest(request) {
   try {
     const response = await fetch(request);
     
-    // Cache the tile for future use
-    const cache = await caches.open(TILE_CACHE_NAME);
-    cache.put(request, response.clone());
+    // Only cache successful responses
+    if (response.ok) {
+      // Cache the tile for future use
+      const cache = await caches.open(TILE_CACHE_NAME);
+      cache.put(request, response.clone());
+    }
     
     return response;
   } catch (error) {
-    // If network request fails, return a fallback tile or error
     console.error('Failed to fetch map tile:', error);
     
-    // You could return a fallback tile image here
-    // For now, we'll just return a 404
-    return new Response('Tile not available offline', { status: 404 });
+    // Return a simple text response for offline tiles
+    return new Response('Tile not available offline', { 
+      status: 404,
+      headers: { 'Content-Type': 'text/plain' }
+    });
   }
 }

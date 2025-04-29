@@ -160,7 +160,20 @@ export function OfflineMap({
 
   // Get the data to display based on the current mode
   const getDisplayData = (): LocationData[] => {
-    return isOfflineMode ? getOfflineData() : initialLocations
+    if (isOfflineMode) {
+      const offlineData = getOfflineData();
+      if (offlineData.length === 0) {
+        // If no offline data is available, show a toast and return initial locations
+        toast({
+          title: "Brak danych offline",
+          description: "Pobierz dane mapy do użytku offline.",
+          variant: "destructive",
+        });
+        return initialLocations;
+      }
+      return offlineData;
+    }
+    return initialLocations;
   }
 
   return (
