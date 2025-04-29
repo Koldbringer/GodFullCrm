@@ -11,10 +11,11 @@ RUN npm ci --legacy-peer-deps
 # Copy app source
 COPY Crm/ .
 
-# Add missing dependencies
+# Add missing dependencies and ensure all dependencies are installed
 RUN npm install --legacy-peer-deps react-beautiful-dnd
+RUN npm install --legacy-peer-deps
 
-# Build the app
+# Build the app with verbose output to debug any issues
 RUN npm run build
 
 # Production image, copy all the files and run next
