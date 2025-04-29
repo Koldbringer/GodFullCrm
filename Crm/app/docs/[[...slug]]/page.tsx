@@ -1,45 +1,31 @@
-import { source } from '@/lib/source';
 import { notFound } from 'next/navigation';
-import { getMDXComponents } from '@/components/mdx/page';
 
 export default async function Page(props: {
-  params: Promise<{ slug?: string[] }>;
+  params: { slug?: string[] };
 }) {
-  const params = await props.params;
-  const page = source.getPage(params.slug);
-  if (!page) notFound();
-
-  const MDXContent = page.data.body;
-
+  const { slug } = props.params;
+  
+  // Simple placeholder for documentation
   return (
-    <div>
-      <h1>{page.data.title}</h1>
-      <p>{page.data.description}</p>
-      <div>
-        <MDXContent
-          components={getMDXComponents({
-            // this allows you to link to other pages with relative file paths
-            // a: createRelativeLink(source, page),
-          })}
-        />
-      </div>
+    <div className="container mx-auto py-8 px-4">
+      <h1 className="text-3xl font-bold mb-4">Documentation</h1>
+      <p className="mb-6">Documentation will be available soon.</p>
+      
+      {slug && slug.length > 0 && (
+        <div className="p-4 bg-gray-100 rounded-md">
+          <h2 className="text-xl font-semibold mb-2">Current Path</h2>
+          <p className="font-mono">/docs/{slug.join('/')}</p>
+        </div>
+      )}
     </div>
   );
 }
 
-export async function generateStaticParams() {
-  return source.generateParams();
-}
-
-export async function generateMetadata(props: {
-  params: Promise<{ slug?: string[] }>;
+export function generateMetadata(props: {
+  params: { slug?: string[] };
 }) {
-  const params = await props.params;
-  const page = source.getPage(params.slug);
-  if (!page) notFound();
-
   return {
-    title: page.data.title,
-    description: page.data.description,
+    title: 'Documentation',
+    description: 'GodFullCrm documentation',
   };
 }
