@@ -14,8 +14,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { GeoSelector } from "@/components/map/geo-selector"
+import dynamic from 'next/dynamic'
 import { createSite, updateSite } from "@/lib/api"
+
+// Dynamically import the GeoSelector component with no SSR
+const GeoSelector = dynamic(
+  () => import('@/components/map/geo-selector').then(mod => mod.GeoSelector),
+  { ssr: false }
+)
 
 // Schema for site form validation
 const siteSchema = z.object({
