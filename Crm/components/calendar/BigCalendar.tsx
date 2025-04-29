@@ -204,6 +204,43 @@ export default function BigCalendar() {
   const [modalOpen, setModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch events from API
+  const fetchEvents = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/calendar${filter !== 'all' ? `?type=${filter}` : ''}`);
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching events: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Convert string dates to Date objects
+      const formattedEvents = data.map((event: any) => ({
+        ...event,
+        start: new Date(event.start),
+        end: new Date(event.end)
+      }));
+      
+      setEvents(formattedEvents);
+    } catch (err) {
+      console.error('Error fetching calendar events:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load events');
+      // Fallback to initial events if API fails
+      setEvents(initialEvents);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [filter]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -216,25 +253,60 @@ export default function BigCalendar() {
     [events, filter]
   );
 
-  function handleAddEvent(data: any) {
-    setEvents(prev => [
-      ...prev,
-      {
-        id: (prev.length + 1).toString(),
-        title: data.title,
-        start: data.startDate,
-        end: data.endDate || data.startDate,
-        type: data.type,
-        resource: {
+  async function handleAddEvent(data: any) {
+    try {
+      const response = await fetch('/api/calendar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: data.title,
+          type: data.type,
+          startDate: data.startDate.toISOString(),
+          endDate: data.endDate ? data.endDate.toISOString() : data.startDate.toISOString(),
           customer: data.client,
           technician: data.technician,
-          site: data.location,
+          location: data.location,
           device: data.device,
           status: data.status,
           description: data.description,
-        }
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error creating event: ${response.status}`);
       }
-    ])
+      
+      const newEvent = await response.json();
+      
+      // Convert string dates to Date objects
+      newEvent.start = new Date(newEvent.start);
+      newEvent.end = new Date(newEvent.end);
+      
+      setEvents(prev => [...prev, newEvent]);
+    } catch (err) {
+      console.error('Error adding event:', err);
+      // Fallback to client-side event creation if API fails
+      setEvents(prev => [
+        ...prev,
+        {
+          id: (prev.length + 1).toString(),
+          title: data.title,
+          start: data.startDate,
+          end: data.endDate || data.startDate,
+          type: data.type,
+          resource: {
+            customer: data.client,
+            technician: data.technician,
+            site: data.location,
+            device: data.device,
+            status: data.status,
+            description: data.description,
+          }
+        }
+      ]);
+    }
   }
 
   function handleEventSelect(event: CalendarEvent) {
@@ -242,31 +314,100 @@ export default function BigCalendar() {
     setDetailsModalOpen(true);
   }
 
-  function handleDeleteEvent(eventId: string) {
-    setEvents(prev => prev.filter(e => e.id !== eventId));
-    setDetailsModalOpen(false);
+  async function handleDeleteEvent(eventId: string) {
+    try {
+      const response = await fetch(`/api/calendar?id=${eventId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error deleting event: ${response.status}`);
+      }
+      
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      // Fallback to client-side deletion if API fails
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+    } finally {
+      setDetailsModalOpen(false);
+    }
   }
 
   function handleEditEvent(edited: CalendarEvent) {
+    setSelectedEvent(edited);
     setModalOpen(true);
     setDetailsModalOpen(false);
-    // Możesz dodać logikę edycji tutaj (np. przekazać event do modala edycji)
   }
 
-  function handleEventDrop({ event, start, end }: any) {
-    setEvents(prev =>
-      prev.map(ev =>
-        ev.id === event.id ? { ...ev, start, end } : ev
-      )
-    );
+  async function handleEventDrop({ event, start, end }: any) {
+    try {
+      const response = await fetch('/api/calendar', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: event.id,
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error updating event: ${response.status}`);
+      }
+      
+      // Update the event in the local state
+      setEvents(prev =>
+        prev.map(ev =>
+          ev.id === event.id ? { ...ev, start, end } : ev
+        )
+      );
+    } catch (err) {
+      console.error('Error updating event dates:', err);
+      // Fallback to client-side update if API fails
+      setEvents(prev =>
+        prev.map(ev =>
+          ev.id === event.id ? { ...ev, start, end } : ev
+        )
+      );
+    }
   }
 
-  function handleEventResize({ event, start, end }: any) {
-    setEvents(prev =>
-      prev.map(ev =>
-        ev.id === event.id ? { ...ev, start, end } : ev
-      )
-    );
+  async function handleEventResize({ event, start, end }: any) {
+    try {
+      const response = await fetch('/api/calendar', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: event.id,
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error updating event: ${response.status}`);
+      }
+      
+      // Update the event in the local state
+      setEvents(prev =>
+        prev.map(ev =>
+          ev.id === event.id ? { ...ev, start, end } : ev
+        )
+      );
+    } catch (err) {
+      console.error('Error updating event dates:', err);
+      // Fallback to client-side update if API fails
+      setEvents(prev =>
+        prev.map(ev =>
+          ev.id === event.id ? { ...ev, start, end } : ev
+        )
+      );
+    }
   }
 
   return (
@@ -281,7 +422,32 @@ export default function BigCalendar() {
         <button onClick={() => setFilter('inspection')} className={`px-2 py-1 rounded ${filter==='inspection' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-900'}`}>Oględziny</button>
         <button onClick={() => setModalOpen(true)} className="ml-auto bg-brand px-4 py-2 rounded text-white font-semibold shadow hover:bg-brand/80 flex-shrink-0">+ Dodaj wydarzenie</button>
       </div>
-      <div className="flex-1 min-h-0 flex flex-col overflow-auto">
+      
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 relative">
+          <strong className="font-bold">Błąd!</strong>
+          <span className="block sm:inline"> {error}</span>
+          <button 
+            className="absolute top-0 bottom-0 right-0 px-4 py-3" 
+            onClick={() => setError(null)}
+          >
+            <span className="text-xl">&times;</span>
+          </button>
+        </div>
+      )}
+      
+      <div className="flex-1 min-h-0 flex flex-col overflow-auto relative">
+        {/* Loading overlay */}
+        {loading && (
+          <div className="absolute inset-0 bg-white/70 dark:bg-black/70 flex items-center justify-center z-10">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <span className="mt-2 text-primary font-medium">Ładowanie wydarzeń...</span>
+            </div>
+          </div>
+        )}
+        
         <DnDCalendar
           localizer={localizer as any}
           events={[...filteredEvents, ...outlookEvents]}
