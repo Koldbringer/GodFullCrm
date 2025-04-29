@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "type": "docker-compose",
+  "compose": {
+    "file": "docker-compose.yaml"
+  },
+  "env": [
+    "DATABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXTAUTH_SECRET",
+    "NEXTAUTH_URL"
+  ]
+}

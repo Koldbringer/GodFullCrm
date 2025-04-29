@@ -25,6 +25,9 @@ WORKDIR /app
 # Set production environment
 ENV NODE_ENV=production
 
+# Install necessary tools for health checks
+RUN apk add --no-cache wget curl
+
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -41,14 +44,11 @@ RUN mkdir -p .next/cache
 RUN chown -R nextjs:nodejs .next
 RUN chmod -R 775 .next
 
-# Switch to non-root user
-USER nextjs
-
 # Expose the listening port
 EXPOSE 3000
 
 # Set healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD curl -f http://localhost:3000/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 # Run the app
 CMD ["node", "server.js"]
