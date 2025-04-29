@@ -12,7 +12,7 @@ RUN npm ci --legacy-peer-deps
 COPY Crm/ .
 
 # Add missing dependencies
-RUN npm install --legacy-peer-deps react-beautiful-dnd fumadocs-core
+RUN npm install --legacy-peer-deps react-beautiful-dnd
 
 # Build the app
 RUN npm run build

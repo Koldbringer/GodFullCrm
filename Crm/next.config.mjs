@@ -1,6 +1,6 @@
-import { createMDX } from 'fumadocs-mdx/next';
-
-const withMDX = createMDX();
+// MDX support will be added later
+// import { createMDX } from 'fumadocs-mdx/next';
+// const withMDX = createMDX();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -35,4 +35,5 @@ const nextConfig = {
   },
 }
 
-export default withMDX(nextConfig);
+// export default withMDX(nextConfig);
+export default nextConfig;
