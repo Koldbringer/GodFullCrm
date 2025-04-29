@@ -7,6 +7,7 @@ const PRECACHE_ASSETS = [
   '/',
   '/map/offline',
   '/api/sample-data',
+  '/api/offline-map-data',
 ];
 
 // OpenStreetMap tile URL pattern
