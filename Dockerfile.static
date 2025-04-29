@@ -1,40 +1,32 @@
 FROM node:18-alpine AS builder
 
-# Set working directory to match the Crm folder structure
 WORKDIR /app
 
-# Copy only the Crm folder's package.json and package-lock.json
-COPY Crm/package*.json ./
+# Copy package.json and package-lock.json
+COPY Crm/package.json Crm/package-lock.json ./
 
 # Install dependencies
-RUN npm install --legacy-peer-deps
+RUN npm install
 
-# Install additional dependencies that might be missing
-RUN npm install --legacy-peer-deps react-beautiful-dnd fumadocs-core
-
-# Copy only the Crm folder contents
+# Copy the application code
 COPY Crm/ ./
 
-# Create a minimal next.config.mjs that enables static export
-RUN echo 'export default {output:"export",eslint:{ignoreDuringBuilds:true},typescript:{ignoreBuildErrors:true},images:{unoptimized:true}};' > next.config.mjs
+# Create a simple next.config.js that enables static export
+RUN echo 'module.exports = {output:"export",eslint:{ignoreDuringBuilds:true},typescript:{ignoreBuildErrors:true},swcMinify:false,images:{unoptimized:true}};' > next.config.js
 
-# Create .env.production with default values
+# Create .env.production with placeholder values
 RUN echo "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co" > .env.production && \
     echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key" >> .env.production
 
-# Fix React components by adding "use client" directive
-RUN for file in $(find ./components -type f -name "*.tsx" | xargs grep -l "useState\|useEffect\|useContext\|useReducer\|useCallback\|useMemo\|useRef" 2>/dev/null || echo ""); do \
-      if [ -f "$file" ]; then \
-        sed -i '1s/^/"use client";\n/' "$file"; \
-      fi; \
-    done || true
+# Add "use client" directive to all component files
+RUN find ./components -type f -name "*.tsx" -exec sed -i '1s/^/"use client";\n/' {} \; || true
 
-# Set NODE_OPTIONS to increase memory limit
+# Set environment variables
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max_old_space_size=4096"
 
 # Build the application with static export
-RUN npm run build || (echo "Build failed, retrying..." && npm run build) || (echo "Build failed again, final attempt..." && npm run build)
+RUN npx next build
 
 # Production stage with nginx
 FROM nginx:alpine
