@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import CustomerAutocomplete from "./CustomerAutocomplete";
 import ServiceMultiSelectAutocomplete from "./ServiceMultiSelectAutocomplete";
+import AIPricingAssistant from "./AIPricingAssistant";
 
 interface Product {
   name: string;
@@ -24,6 +25,7 @@ export default function OfferGeneratorForm() {
   const [saving, setSaving] = useState(false);
   const [savedUrl, setSavedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
 
   // Helpers to add items
   const addProduct = () => setProducts([...products, { name: "", qty: 1, unitPrice: 0 }]);
@@ -35,6 +37,17 @@ export default function OfferGeneratorForm() {
   };
   const updateServiceJob = (i: number, field: keyof Service, value: any) => {
     setServiceJobs(serviceJobs.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
+  };
+  
+  // Handle AI suggestions
+  const handleAISuggestions = (suggestions: {
+    products: Array<{ name: string; qty: number; unitPrice: number }>;
+    services: Array<{ id: string; name: string; price: number }>;
+  }) => {
+    // Merge AI suggestions with existing products and services
+    setProducts([...products, ...suggestions.products]);
+    setSelectedServices([...selectedServices, ...suggestions.services]);
+    setShowAIAssistant(false); // Hide the assistant after getting suggestions
   };
 
   // Generate MDX offer
@@ -83,7 +96,29 @@ export default function OfferGeneratorForm() {
 
   return (
     <form className="max-w-2xl mx-auto p-6 bg-white rounded shadow flex flex-col gap-6" onSubmit={handleGenerate}>
-      <h2 className="text-xl font-bold mb-2">Generator oferty MDX</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold">Generator oferty MDX</h2>
+        <button 
+          type="button" 
+          className="btn btn-sm btn-outline btn-primary flex items-center gap-1"
+          onClick={() => setShowAIAssistant(!showAIAssistant)}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3v4"></path><path d="M18 6l-2.5 2.5"></path><path d="M6 6l2.5 2.5"></path>
+            <path d="M3 12h4"></path><path d="M17 12h4"></path><path d="M12 17v4"></path>
+            <path d="M18 18l-2.5-2.5"></path><path d="M6 18l2.5-2.5"></path>
+          </svg>
+          {showAIAssistant ? 'Ukryj asystenta AI' : 'Pokaż asystenta AI'}
+        </button>
+      </div>
+      
+      {showAIAssistant && (
+        <AIPricingAssistant 
+          onSuggestionsGenerated={handleAISuggestions}
+          customerName={client}
+        />
+      )}
+      
       <label className="block">
         <span className="font-semibold">Nazwa klienta:</span>
         <CustomerAutocomplete value={client} onChange={setClient} />
