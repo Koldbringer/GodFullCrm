@@ -1,25 +1,14 @@
 {
   "version": "1.0.0",
-  "type": "docker",
-  "dockerfile": {
-    "path": "Dockerfile",
-    "tag": "godcrm:latest"
+  "type": "docker-compose",
+  "compose": {
+    "file": "./docker-compose.yaml"
   },
-  "ports": [
-    {
-      "published": 3000,
-      "target": 3000
-    }
-  ],
   "env": [
     "DATABASE_URL",
     "NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "NEXTAUTH_SECRET",
     "NEXTAUTH_URL"
-  ],
-  "healthcheck": {
-    "path": "/api/health",
-    "port": 3000
-  }
+  ]
 }
