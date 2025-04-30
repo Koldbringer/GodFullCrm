@@ -1,22 +1,22 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet"
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet"
 import MarkerClusterGroup from "react-leaflet-markercluster"
 import 'react-leaflet-markercluster/styles';
-import { Icon, LatLngExpression, LatLngBounds } from "leaflet"
+import { Icon, LatLngExpression } from "leaflet"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import {
-  MapPin,
-  Building2,
-  Home,
-  Store,
-  User,
-  Wrench,
-  Calendar,
+import { 
+  MapPin, 
+  Building2, 
+  Home, 
+  Store, 
+  User, 
+  Wrench, 
+  Calendar, 
   Clock,
   Layers,
   ZoomIn,
@@ -54,32 +54,22 @@ export interface LocationData {
   meta?: Record<string, any> // Additional metadata
 }
 
-// Placeholder function for fetching locations by bounds
-// This will need to be implemented to call the backend API
-async function fetchLocationsByBounds(bounds: LatLngBounds): Promise<LocationData[]> {
-  console.log("Fetching locations for bounds:", bounds.toString());
-  // TODO: Implement actual API call to fetch locations within bounds
-  // For now, return an empty array or a subset of existing data
-  return [];
-}
-
-
 // Map control component to recenter the map
 function MapControls({ center }: { center: LatLngExpression }) {
   const map = useMap()
-
+  
   const handleCenter = () => {
     map.setView(center, DEFAULT_ZOOM)
   }
-
+  
   const handleZoomIn = () => {
     map.setZoom(map.getZoom() + 1)
   }
-
+  
   const handleZoomOut = () => {
     map.setZoom(map.getZoom() - 1)
   }
-
+  
   return (
     <div className="absolute right-2 top-2 z-[1000] flex flex-col gap-2">
       <Button variant="outline" size="icon" className="h-8 w-8 bg-background shadow-md" onClick={handleCenter}>
@@ -95,42 +85,6 @@ function MapControls({ center }: { center: LatLngExpression }) {
   )
 }
 
-// Component to update locations based on map bounds
-function MapBoundsUpdater({ setLocations }: { setLocations: (locations: LocationData[]) => void }) {
-  const map = useMapEvents({
-    moveend: () => {
-      const bounds = map.getBounds();
-      fetchLocationsByBounds(bounds).then(data => setLocations(data));
-    },
-    zoomend: () => {
-      const bounds = map.getBounds();
-      fetchLocationsByBounds(bounds).then(data => setLocations(data));
-    },
-  });
-
-  // Initial load
-  useEffect(() => {
-    const bounds = map.getBounds();
-    fetchLocationsByBounds(bounds).then(data => setLocations(data));
-  }, [map, setLocations]);
-
-  return null;
-}
-
-
-// Create a custom HTML element for the marker
-const getIconSvg = (type: MarkerType) => {
-  switch (type) {
-    case "customer": return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>`;
-    case "site": return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`;
-    case "service": return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`;
-    case "technician": return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
-    case "device": return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M9 9h6v6H9z"/><path d="M15 3v2"/><path d="M9 3v2"/><path d="M15 19v2"/><path d="M9 19v2"/><path d="M3 9h2"/><path d="M3 15h2"/><path d="M19 9h2"/><path d="M19 15h2"/></svg>`;
-    default: return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`;
-  }
-}
-
-
 // Custom marker icon based on type
 function getMarkerIcon(type: MarkerType, status?: string) {
   // Create a custom icon based on the marker type
@@ -139,7 +93,7 @@ function getMarkerIcon(type: MarkerType, status?: string) {
     if (status === "inactive") return "#6b7280" // gray
     if (status === "pending") return "#f59e0b" // amber
     if (status === "service-needed") return "#ef4444" // red
-
+    
     // Default colors by type
     switch (type) {
       case "customer": return "#3b82f6" // blue
@@ -148,6 +102,18 @@ function getMarkerIcon(type: MarkerType, status?: string) {
       case "technician": return "#06b6d4" // cyan
       case "device": return "#14b8a6" // teal
       default: return "#6b7280" // gray
+    }
+  }
+  
+  // Create a custom HTML element for the marker
+  const getIconSvg = (type: MarkerType) => {
+    switch (type) {
+      case "customer": return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>`;
+      case "site": return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`;
+      case "service": return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`;
+      case "technician": return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+      case "device": return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M9 9h6v6H9z"/><path d="M15 3v2"/><path d="M9 3v2"/><path d="M15 19v2"/><path d="M9 19v2"/><path d="M3 9h2"/><path d="M3 15h2"/><path d="M19 9h2"/><path d="M19 15h2"/></svg>`;
+      default: return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`;
     }
   }
 
@@ -203,7 +169,7 @@ function getStatusBadgeColor(status?: string) {
 }
 
 interface MapViewProps {
-  initialLocations: LocationData[] // Renamed prop to avoid conflict with state
+  locations: LocationData[]
   title?: string
   description?: string
   onMarkerClick?: (location: LocationData) => void
@@ -216,7 +182,7 @@ interface MapViewProps {
 }
 
 export function MapView({
-  initialLocations, // Use initialLocations prop
+  locations,
   title = "Mapa lokalizacji",
   description = "Wizualizacja lokalizacji na mapie",
   onMarkerClick,
@@ -230,8 +196,7 @@ export function MapView({
   const [mapReady, setMapReady] = useState(false)
   const [activeLocation, setActiveLocation] = useState<LocationData | null>(null)
   const [mapType, setMapType] = useState<"standard" | "satellite" | "terrain">("standard")
-  const [locations, setLocations] = useState<LocationData[]>(initialLocations); // Manage locations in state
-
+  
   // Set active location based on selectedLocation prop
   useEffect(() => {
     if (selectedLocation) {
@@ -241,7 +206,7 @@ export function MapView({
       }
     }
   }, [selectedLocation, locations])
-
+  
   // Handle marker click
   const handleMarkerClick = (location: LocationData) => {
     setActiveLocation(location)
@@ -249,7 +214,7 @@ export function MapView({
       onMarkerClick(location)
     }
   }
-
+  
   // Handle sidebar item click
   const handleSidebarItemClick = (location: LocationData) => {
     setActiveLocation(location)
@@ -257,22 +222,22 @@ export function MapView({
       onMarkerClick(location)
     }
   }
-
+  
   // Fix for Leaflet marker icons in Next.js
   useEffect(() => {
     // This is needed to fix the marker icon issue with Next.js
     const L = require("leaflet")
-
+    
     delete L.Icon.Default.prototype._getIconUrl
     L.Icon.Default.mergeOptions({
       iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
       iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
       shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
     })
-
+    
     setMapReady(true)
   }, [])
-
+  
   // Get map tile layer based on map type
   const getTileLayer = () => {
     switch (mapType) {
@@ -284,7 +249,7 @@ export function MapView({
         return "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
     }
   }
-
+  
   return (
     <div className={`grid grid-cols-1 ${showSidebar ? 'md:grid-cols-3' : ''} gap-4 ${className}`}>
       <div className={showSidebar ? "md:col-span-2" : "col-span-1"}>
@@ -318,8 +283,7 @@ export function MapView({
                     url={getTileLayer()}
                   />
                   <MapControls center={center} />
-                  <MapBoundsUpdater setLocations={setLocations} /> {/* Add the new component */}
-
+                  
                   <MarkerClusterGroup
                     chunkedLoading
                   >
@@ -357,7 +321,7 @@ export function MapView({
           </CardContent>
         </Card>
       </div>
-
+      
       {showSidebar && (
         <div>
           <Card className="h-full">
@@ -394,22 +358,21 @@ export function MapView({
                         )}
                       </div>
                       {location.status && (
-                        <Badge
-                          variant="outline"
+                        <Badge 
+                          variant="outline" 
                           className={`${getStatusBadgeColor(location.status)} text-white`}
                         >
                           {location.status}
                         </Badge>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-      )
-}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

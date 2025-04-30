@@ -10,11 +10,7 @@
       "args": [
         "C:\\Users\\koldbringer\\Documents\\Cline\\MCP\\context7-mcp\\dist\\index.js"
       ],
-      "transportType": "stdio",
-      "alwaysAllow": [
-        "resolve-library-id",
-        "get-library-docs"
-      ]
+      "transportType": "stdio"
     },
     "github.com/zcaceres/fetch-mcp": {
       "autoApprove": [
@@ -33,7 +29,7 @@
       "autoApprove": [
         "scrape_webpage"
       ],
-      "disabled": true,
+      "disabled": false,
       "timeout": 60,
       "command": "cmd.exe",
       "args": [
@@ -43,8 +39,7 @@
       "env": {
         "HYPERBROWSER_API_KEY": "hb_f92026e749c17c16f3eda2fa1b7f"
       },
-      "transportType": "stdio",
-      "alwaysAllow": []
+      "transportType": "stdio"
     },
     "github.com/tavily-ai/tavily-mcp": {
       "autoApprove": [
@@ -61,11 +56,7 @@
       "env": {
         "TAVILY_API_KEY": "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"
       },
-      "transportType": "stdio",
-      "alwaysAllow": [
-        "tavily-search",
-        "tavily-extract"
-      ]
+      "transportType": "stdio"
     },
     "github.com/Operative-Sh/web-eval-agent": {
       "autoApprove": [
@@ -90,26 +81,13 @@
       "timeout": 60,
       "command": "C:\\Users\\koldbringer\\pipx\\venvs\\supabase-mcp-server\\Scripts\\supabase-mcp-server.exe",
       "env": {
-        "SUPABASE_PROJECT_REF": "jpupkxgegnknzmdpqwdz",
-        "SUPABASE_DB_PASSWORD": "Blaeritripol1",
-        "SUPABASE_REGION": "eu-central-1",
-        "SUPABASE_ACCESS_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwdXBreGdlZ25rbnptZHBxd2R6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0MjA2ODEsImV4cCI6MjA2MDk5NjY4MX0.LWlDmVDHFEiVGu1vj8t3u1kQK5n_uhEIzAojhklzUUc",
-        "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwdXBreGdlZ25rbnptZHBxd2R6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NTQyMDY4MSwiZXhwIjoyMDYwOTk2NjgxfQ.ALvFaFKmANOvr-lAx9TPaXH1m7hayYsvW8sIpYRBrKY"
+        "SUPABASE_PROJECT_REF": "agttqxgxddftbssmghqi",
+        "SUPABASE_DB_PASSWORD": "blaeritipol",
+        "SUPABASE_REGION": "eu-west-1",
+        "SUPABASE_ACCESS_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndHRxeGd4ZGRmdGJzc21naHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2NTUxOTgsImV4cCI6MjA1OTIzMTE5OH0.skvWV7ReS64SIwnrDiQ4DBk9w0R_HRfcIHVf87AKC98",
+        "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndHRxeGd4ZGRmdGJzc21naHFpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MzY1NTE5OCwiZXhwIjoyMDU5MjMxMTk4fQ.XGuqtPVbsdqtoHI3zwpx-Yf44M4ukhX3gHjhx-cg_7Y"
       },
-      "transportType": "stdio",
-      "alwaysAllow": [
-        "get_schemas",
-        "get_tables",
-        "execute_postgresql",
-        "send_management_api_request",
-        "get_management_api_spec",
-        "call_auth_admin_method",
-        "get_auth_admin_methods_spec",
-        "live_dangerously",
-        "confirm_destructive_operation",
-        "retrieve_logs",
-        "get_table_schema"
-      ]
+      "transportType": "stdio"
     },
     "dart-mcp-server": {
       "autoApprove": [

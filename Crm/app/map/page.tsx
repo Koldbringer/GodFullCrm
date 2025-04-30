@@ -37,19 +37,6 @@ async function getMapData({
 } = {}) {
   const supabase = await createServerClient()
 
-  if (!supabase) {
-    console.error("Failed to create Supabase client.");
-    return {
-      customers: [],
-      addresses: [],
-      sites: [],
-      serviceOrders: [],
-      technicians: [],
-      districts: [],
-      siteTypes: []
-    };
-  }
-
   // Fetch customers with their addresses
   let customersQuery = supabase
     .from('customers')
@@ -64,7 +51,7 @@ async function getMapData({
 
   // Apply customer type filter if provided
   if (customerType && customerType !== 'all') {
-    customersQuery = customersQuery.eq('type', customerType as any)
+    customersQuery = customersQuery.eq('type', customerType)
   }
 
   const { data: customers } = await customersQuery
@@ -137,7 +124,7 @@ async function getMapData({
 
   // Apply service status filter if provided
   if (serviceStatus && serviceStatus !== 'all') {
-    serviceOrdersQuery = serviceOrdersQuery.eq('status', serviceStatus as any)
+    serviceOrdersQuery = serviceOrdersQuery.eq('status', serviceStatus)
   }
 
   const { data: serviceOrders } = await serviceOrdersQuery
@@ -237,39 +224,20 @@ async function getMapData({
     siteTypes: Array.from(siteTypes).filter(type => type !== '').sort()
   }
 }
+
 export default async function MapPage({
   searchParams
 }: {
-  searchParams: { [key: string]: string | string[] | undefined } | Promise<{ [key: string]: string | string[] | undefined }>
+  searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  // Await searchParams if it's a Promise (as required in Next.js 14+)
-  const params = await (typeof (searchParams as any)?.then === 'function' 
-    ? searchParams 
-    : Promise.resolve(searchParams));
-
   // Extract filter parameters from URL - convert to proper types
-  const district = (params && (Array.isArray(params.district) 
-    ? params.district[0] 
-    : params.district)) ?? 'all';
-  
-  const limitStr = (params && (Array.isArray(params.limit) 
-    ? params.limit[0] 
-    : params.limit)) ?? '100';
-  
-  const limit = parseInt(limitStr) || 100;
-  
-  const customerType = (params && (Array.isArray(params.customerType) 
-    ? params.customerType[0] 
-    : params.customerType)) ?? 'all';
-  
-  const siteType = (params && (Array.isArray(params.siteType) 
-    ? params.siteType[0] 
-    : params.siteType)) ?? 'all';
-  
-  const serviceStatus = (params && (Array.isArray(params.serviceStatus) 
-    ? params.serviceStatus[0] 
-    : params.serviceStatus)) ?? 'all';
-  
+  const district = typeof searchParams.district === 'string' ? searchParams.district : 'all'
+  const limitStr = typeof searchParams.limit === 'string' ? searchParams.limit : '100'
+  const limit = parseInt(limitStr) || 100
+  const customerType = typeof searchParams.customerType === 'string' ? searchParams.customerType : 'all'
+  const siteType = typeof searchParams.siteType === 'string' ? searchParams.siteType : 'all'
+  const serviceStatus = typeof searchParams.serviceStatus === 'string' ? searchParams.serviceStatus : 'all'
+
   // Get data with filters
   const {
     technicians,

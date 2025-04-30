@@ -142,7 +142,7 @@ export default function ServiceOrdersPage() {
           </div>
         </div>
         <div className="space-y-4">
-          <Tabs defaultValue="kanban" className="space-y-4">
+          <Tabs defaultValue="table" className="space-y-4">
             <TabsList>
               <TabsTrigger value="table" className="flex items-center">
                 <List className="mr-2 h-4 w-4" />

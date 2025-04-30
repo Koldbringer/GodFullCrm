@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { pl } from "date-fns/locale"
 import { AlertCircle, CheckCircle2, Clock, MoreHorizontal, Package, Plus, Loader2 } from "lucide-react"
 import { StatusBadge } from "@/components/atoms/status-badge"
+import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided, DraggableStateSnapshot } from 'react-beautiful-dnd'
 import Link from "next/link"
-import { draggable, dropTargetForElements, monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { toast } from "sonner"
 import "@/styles/kanban.css"
 
@@ -32,13 +32,6 @@ interface TicketsKanbanProps {
   initialTickets?: any[]
 }
 
-// Define getTickets if it's not imported
-async function getTickets() {
-  // Placeholder for fetching tickets
-  console.warn("getTickets function is not implemented. Replace with actual data fetching logic.")
-  return [];
-}
-
 // Przykładowe dane zgłoszeń są teraz importowane z tickets-server.tsx
 
 // Mapowanie statusów z bazy danych na statusy w UI
@@ -57,23 +50,7 @@ const reverseStatusMapping = {
   "closed": "closed"
 }
 
-interface Ticket {
-  id: string;
-  title: string;
-  created_at: string;
-  priority: string;
-  status: string;
-  device?: {
-    type?: string;
-    model?: string;
-  };
-  customer?: {
-    name?: string;
-  };
-  technician?: {
-    name: string;
-  };
-}
+type Ticket = any
 
 export function TicketsKanban({ initialTickets = [] }: TicketsKanbanProps) {
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets.length > 0 ? initialTickets : fallbackTicketsData)
@@ -87,11 +64,6 @@ export function TicketsKanban({ initialTickets = [] }: TicketsKanbanProps) {
     closed: [],
   }))
 
-  // Refs for drag and drop elements
-  const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const ticketRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-
   // Inicjalizacja danych
   useEffect(() => {
     // Ustawienie danych początkowych
@@ -101,24 +73,22 @@ export function TicketsKanban({ initialTickets = [] }: TicketsKanbanProps) {
     const supabase = createClient()
 
     // Subskrypcja na zmiany w tabeli tickets
-    if (supabase) { // Add null check for supabase
-      const ticketsSubscription = supabase
-        .channel('tickets-changes')
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'tickets' },
-          async (payload) => {
-            console.log('Zmiana w tabeli tickets:', payload)
-            // Odświeżenie danych po zmianie
-            const data = await getTickets() // Assuming getTickets is defined elsewhere or will be implemented
-            setTickets(data)
-          }
-        )
-        .subscribe()
+    const ticketsSubscription = supabase
+      .channel('tickets-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'tickets' },
+        async (payload) => {
+          console.log('Zmiana w tabeli tickets:', payload)
+          // Odświeżenie danych po zmianie
+          const data = await getTickets()
+          setTickets(data)
+        }
+      )
+      .subscribe()
 
-      // Czyszczenie subskrypcji przy odmontowaniu komponentu
-      return () => {
-        supabase.removeChannel(ticketsSubscription)
-      }
+    // Czyszczenie subskrypcji przy odmontowaniu komponentu
+    return () => {
+      supabase.removeChannel(ticketsSubscription)
     }
   }, [])
 
@@ -131,67 +101,67 @@ export function TicketsKanban({ initialTickets = [] }: TicketsKanbanProps) {
       ticket.id.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // Setup drop targets for columns
-  useEffect(() => {
-    Object.entries(columnRefs.current).forEach(([status, ref]) => {
-      if (ref) {
-        return dropTargetForElements({
-          element: ref,
-          onDrop: (args) => {
-            const sourceTicketId = args.source.data.ticketId as string;
-            const destinationStatus = status;
+  const handleDragEnd = async (result: DropResult) => {
+    const { source, destination } = result
+    if (!destination) return
 
-            // Find the ticket being dragged
-            const draggedTicket = tickets.find(ticket => ticket.id === sourceTicketId);
+    // Pobierz ID przeciąganego zgłoszenia
+    const ticketId = result.draggableId
+    setUpdatingTicket(ticketId)
 
-            if (draggedTicket && statusMapping[draggedTicket.status as keyof typeof statusMapping] !== destinationStatus) {
-              // Update status in the database
-              setUpdatingTicket(sourceTicketId);
-              updateTicket(sourceTicketId, {
-                status: reverseStatusMapping[destinationStatus as keyof typeof reverseStatusMapping],
-                updated_at: new Date().toISOString()
-              })
-              .then(() => {
-                toast.success(`Status zgłoszenia ${sourceTicketId} zmieniony na ${destinationStatus}`);
-              })
-              .catch((error) => {
-                console.error('Error updating ticket status:', error);
-                toast.error("Błąd podczas aktualizacji statusu zgłoszenia");
-                // Revert local state if update fails (optional, depending on desired behavior)
-              })
-              .finally(() => {
-                setUpdatingTicket(null);
-              });
-            }
-          }
-        });
+    if (source.droppableId === destination.droppableId) {
+      // Zmiana kolejności w tej samej kolumnie
+      const col = Array.from(ticketsByStatus[source.droppableId])
+      const [moved] = col.splice(source.index, 1)
+      col.splice(destination.index, 0, moved)
+      setTicketsByStatus({ ...ticketsByStatus, [source.droppableId]: col })
+    } else {
+      // Zmiana statusu zgłoszenia
+      const sourceCol = Array.from(ticketsByStatus[source.droppableId])
+      const [moved] = sourceCol.splice(source.index, 1)
+
+      // Nowy status w formacie bazy danych
+      const newStatus = reverseStatusMapping[destination.droppableId]
+
+      try {
+        // Aktualizacja w bazie danych
+        await updateTicket(ticketId, {
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+
+        // Aktualizacja lokalnego stanu
+        moved.status = newStatus
+        const destCol = Array.from(ticketsByStatus[destination.droppableId])
+        destCol.splice(destination.index, 0, moved)
+        setTicketsByStatus({
+          ...ticketsByStatus,
+          [source.droppableId]: sourceCol,
+          [destination.droppableId]: destCol,
+        })
+
+        toast.success(`Status zgłoszenia ${ticketId} zmieniony na ${destination.droppableId}`)
+      } catch (error) {
+        console.error('Error updating ticket status:', error)
+        toast.error("Błąd podczas aktualizacji statusu zgłoszenia")
+
+        // Przywróć oryginalny stan w przypadku błędu
+        setTicketsByStatus({
+          ...ticketsByStatus
+        })
+      } finally {
+        setUpdatingTicket(null)
       }
-    });
-  }, [tickets]); // Re-run when tickets change
-
-  // Setup draggable for tickets
-  useEffect(() => {
-    // Setup draggable for tickets only if there are tickets
-    if (tickets.length > 0) {
-      tickets.forEach((ticket) => {
-        const ref = ticketRefs.current[ticket.id];
-        if (ref) {
-          return draggable({
-            element: ref,
-           dragHandle: ref,
-          });
-        }
-      });
     }
-  }, [ticketsByStatus, tickets]); // Re-run when ticketsByStatus or tickets changes
+  }
 
   // Aktualizuj kolumny po filtrowaniu zgłoszeń
   useEffect(() => {
     setTicketsByStatus({
-      open: filteredTickets.filter((t) => statusMapping[t.status as keyof typeof statusMapping] === "open"),
-      "in-progress": filteredTickets.filter((t) => statusMapping[t.status as keyof typeof statusMapping] === "in-progress"),
-      scheduled: filteredTickets.filter((t) => statusMapping[t.status as keyof typeof statusMapping] === "scheduled"),
-      closed: filteredTickets.filter((t) => statusMapping[t.status as keyof typeof statusMapping] === "closed"),
+      open: filteredTickets.filter((t) => statusMapping[t.status] === "open"),
+      "in-progress": filteredTickets.filter((t) => statusMapping[t.status] === "in-progress"),
+      scheduled: filteredTickets.filter((t) => statusMapping[t.status] === "scheduled"),
+      closed: filteredTickets.filter((t) => statusMapping[t.status] === "closed"),
     })
   }, [filteredTickets])
 
@@ -224,34 +194,33 @@ export function TicketsKanban({ initialTickets = [] }: TicketsKanbanProps) {
   }
 
   // Komponent karty zgłoszenia
-  const TicketCard = ({ ticket }: { ticket: Ticket }) => {
-    return (
-      <Card className={`mb-3 ${updatingTicket === ticket.id ? 'opacity-50' : ''}`} ref={(el) => { if (el) ticketRefs.current[ticket.id] = el; }}>
-        <CardContent className="p-3">
-          <div className="flex justify-between items-start mb-2">
-            <Badge className={getPriorityColor(ticket.priority)} variant="outline">
-              {getPriorityText(ticket.priority)}
-            </Badge>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Otwórz menu</span>
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Akcje</DropdownMenuLabel>
-                <DropdownMenuItem>
-                  <Link href={`/tickets/${ticket.id}`} className="w-full">Szczegóły zgłoszenia</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>Edytuj zgłoszenie</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Zmień status</DropdownMenuItem>
-                <DropdownMenuItem>Przypisz technika</DropdownMenuItem>
-                <DropdownMenuItem>Zaplanuj wizytę</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+  const TicketCard = ({ ticket }: { ticket: Ticket }) => (
+    <Card className={`mb-3 ${updatingTicket === ticket.id ? 'opacity-50' : ''}`}>
+      <CardContent className="p-3">
+        <div className="flex justify-between items-start mb-2">
+          <Badge className={getPriorityColor(ticket.priority)} variant="outline">
+            {getPriorityText(ticket.priority)}
+          </Badge>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Otwórz menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Akcje</DropdownMenuLabel>
+              <DropdownMenuItem>
+                <Link href={`/tickets/${ticket.id}`} className="w-full">Szczegóły zgłoszenia</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>Edytuj zgłoszenie</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Zmień status</DropdownMenuItem>
+              <DropdownMenuItem>Przypisz technika</DropdownMenuItem>
+              <DropdownMenuItem>Zaplanuj wizytę</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         <h3 className="font-medium text-sm mb-2">{ticket.title}</h3>
         <div className="text-xs text-muted-foreground mb-2">
@@ -303,62 +272,81 @@ export function TicketsKanban({ initialTickets = [] }: TicketsKanbanProps) {
       </CardContent>
     </Card>
   )
-  }
-return (
-  <div className="space-y-4">
-    <div className="flex w-full max-w-sm items-center space-x-2">
-      <Input
-        placeholder="Szukaj zgłoszenia..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-      />
-    </div>
 
-    {loading ? (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-6 w-24" />
-              <Skeleton className="h-6 w-8" />
-            </div>
-            <div className="bg-muted/50 p-2 rounded-md min-h-[500px]">
-              {Array.from({ length: 3 }).map((_, j) => (
-                <Skeleton key={j} className="h-32 w-full mb-3" />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    ) : (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {Object.entries(ticketsByStatus).map(([status, tickets]) => (
-          <div className="space-y-2" key={status} ref={(el) => { if (el) columnRefs.current[status] = el; }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {status === "open" && <AlertCircle className="h-4 w-4 text-yellow-500" />}
-                {status === "in-progress" && <Clock className="h-4 w-4 text-blue-500" />}
-                {status === "scheduled" && <Clock className="h-4 w-4 text-purple-500" />}
-                {status === "closed" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                <h3 className="font-medium">{status.charAt(0).toUpperCase() + status.slice(1)}</h3>
-              </div>
-              <Badge variant="outline">{tickets.length}</Badge>
-            </div>
-            <div className="bg-muted/50 p-2 rounded-md min-h-[500px] relative">
-              {tickets.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-20 text-center text-muted-foreground">
-                  <p className="text-sm">Brak zgłoszeń</p>
+  return (
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <div className="space-y-4">
+        <div className="flex w-full max-w-sm items-center space-x-2">
+          <Input
+            placeholder="Szukaj zgłoszenia..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-6 w-24" />
+                  <Skeleton className="h-6 w-8" />
                 </div>
-              ) : (
-                tickets.map((ticket) => (
-                  <TicketCard key={ticket.id} ticket={ticket} />
-                ))
-              )}
-            </div>
+                <div className="bg-muted/50 p-2 rounded-md min-h-[500px]">
+                  {Array.from({ length: 3 }).map((_, j) => (
+                    <Skeleton key={j} className="h-32 w-full mb-3" />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {Object.entries(ticketsByStatus).map(([status, tickets]) => (
+              <Droppable droppableId={status} key={status}>
+                {(provided: DroppableProvided) => (
+                  <div className="space-y-2" ref={provided.innerRef} {...provided.droppableProps}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {status === "open" && <AlertCircle className="h-4 w-4 text-yellow-500" />}
+                        {status === "in-progress" && <Clock className="h-4 w-4 text-blue-500" />}
+                        {status === "scheduled" && <Clock className="h-4 w-4 text-purple-500" />}
+                        {status === "closed" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                        <h3 className="font-medium">{status.charAt(0).toUpperCase() + status.slice(1)}</h3>
+                      </div>
+                      <Badge variant="outline">{tickets.length}</Badge>
+                    </div>
+                    <div className="bg-muted/50 p-2 rounded-md min-h-[500px] relative">
+                      {tickets.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-20 text-center text-muted-foreground">
+                          <p className="text-sm">Brak zgłoszeń</p>
+                        </div>
+                      ) : (
+                        tickets.map((ticket, index) => (
+                          <Draggable key={ticket.id} draggableId={ticket.id} index={index}>
+                            {(prov: DraggableProvided, snap: DraggableStateSnapshot) => (
+                              <div
+                                ref={prov.innerRef}
+                                {...prov.draggableProps}
+                                {...prov.dragHandleProps}
+                                className={`draggable-item react-beautiful-dnd-draggable ${snap.isDragging ? 'is-dragging' : ''}`}
+                                style={prov.draggableProps.style}
+                              >
+                                <TicketCard ticket={ticket} />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))
+                      )}
+                      {provided.placeholder}
+                    </div>
+                  </div>
+                )}
+              </Droppable>
+            ))}
+          </div>
+        )}
       </div>
-    )}
-  </div>
-)
+    </DragDropContext>
+  )
 }
