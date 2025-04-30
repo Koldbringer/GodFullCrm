@@ -10,6 +10,21 @@ import {
 } from "rete-react-plugin";
 import { DataflowEngine, ControlFlowEngine } from "rete-engine"; // Import silników
 import React, { useEffect, useRef, useState } from "react"; // Dodano useState
+import { TriggerPanel, Trigger } from "./TriggerPanel";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from '@/components/ui/use-toast';
 :start_line:13
 -------
 import { EmailNode } from "./nodes/EmailNode"; // Import EmailNode
@@ -107,16 +122,36 @@ async function createEditor(container: HTMLElement) {
   };
 }
 
+interface WorkflowData {
+  id?: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+  triggers: Trigger[];
+}
+
 const AutomationEditor: React.FC = () => {
   const editorRef = useRef<HTMLDivElement>(null);
-  const [editor, setEditor] = useState<NodeEditor<Schemes> | null>(null); // Stan na instancję edytora
+  const [editor, setEditor] = useState<NodeEditor<Schemes> | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('editor');
+  const [workflowData, setWorkflowData] = useState<WorkflowData>({
+    name: '',
+    description: '',
+    is_active: true,
+    triggers: [],
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [availableWorkflows, setAvailableWorkflows] = useState<any[]>([]);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
 
+  // Initialize editor
   useEffect(() => {
     let currentEditor: NodeEditor<Schemes> | null = null;
     if (editorRef.current) {
       createEditor(editorRef.current).then((result) => {
         currentEditor = result.editor;
-        setEditor(currentEditor); // Ustawiamy instancję edytora w stanie
+        setEditor(currentEditor);
       });
     }
     return () => {
@@ -126,60 +161,353 @@ const AutomationEditor: React.FC = () => {
     };
   }, []);
 
+  // Fetch available workflows
+  useEffect(() => {
+    fetchWorkflows();
+  }, []);
+
+  // Parse URL parameters to load a specific workflow
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const workflowId = urlParams.get('id');
+
+    if (workflowId) {
+      setSelectedWorkflowId(workflowId);
+      loadWorkflow(workflowId);
+    }
+  }, []);
+
+  const fetchWorkflows = async () => {
+    try {
+      const response = await fetch('/api/automation/workflows');
+      const data = await response.json();
+      setAvailableWorkflows(data);
+    } catch (error) {
+      console.error('Error fetching workflows:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch workflows',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const saveWorkflow = async () => {
     if (!editor) return;
-    const graph = editor.toJSON();
-    // Tutaj można dodać logikę pobierania nazwy i opisu workflow
-    const name = "My Workflow"; // Przykładowa nazwa
-    const description = "Workflow description"; // Przykładowy opis
+
+    if (!workflowData.name.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Workflow name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSaving(true);
 
     try {
-      const response = await fetch('/api/automation/workflows', {
-        method: 'POST',
+      // Get the editor graph
+      const graph = editor.toJSON();
+
+      // Add triggers to the graph
+      const graphWithTriggers = {
+        ...graph,
+        triggers: workflowData.triggers,
+      };
+
+      // Prepare the request body
+      const requestBody = {
+        id: workflowData.id,
+        name: workflowData.name,
+        description: workflowData.description,
+        is_active: workflowData.is_active,
+        graph_json: graphWithTriggers,
+      };
+
+      // Determine if this is a create or update operation
+      const method = workflowData.id ? 'PUT' : 'POST';
+      const url = workflowData.id
+        ? `/api/automation/workflows/${workflowData.id}`
+        : '/api/automation/workflows';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, description, graph_json: graph }),
+        body: JSON.stringify(requestBody),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to save workflow');
+      }
+
       const result = await response.json();
-      console.log('Workflow saved:', result);
-      alert('Workflow saved successfully!');
+
+      // Update the workflow ID if this was a new workflow
+      if (!workflowData.id) {
+        setWorkflowData(prev => ({ ...prev, id: result.id }));
+        setSelectedWorkflowId(result.id);
+
+        // Update URL without reloading the page
+        window.history.pushState({}, '', `/automation/editor?id=${result.id}`);
+      }
+
+      // Refresh the workflows list
+      fetchWorkflows();
+
+      toast({
+        title: 'Success',
+        description: 'Workflow saved successfully',
+      });
     } catch (error) {
       console.error('Error saving workflow:', error);
-      alert('Failed to save workflow.');
+      toast({
+        title: 'Error',
+        description: 'Failed to save workflow',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const loadWorkflow = async () => {
+  const loadWorkflow = async (id: string) => {
     if (!editor) return;
-    // Tutaj można dodać logikę wyboru workflow do załadowania
-    // Na razie ładujemy pierwszy znaleziony
-    try {
-      const response = await fetch('/api/automation/workflows');
-      const workflows = await response.json();
 
-      if (workflows && workflows.length > 0) {
-        const latestWorkflow = workflows[workflows.length - 1]; // Ładujemy ostatni
-        await editor.fromJSON(latestWorkflow.graph_json);
-        console.log('Workflow loaded:', latestWorkflow);
-        alert('Workflow loaded successfully!');
-      } else {
-        alert('No workflows found to load.');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`/api/automation/workflows/${id}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to load workflow');
       }
+
+      const workflow = await response.json();
+
+      // Parse the graph JSON
+      let graphJson;
+      try {
+        graphJson = typeof workflow.graph_json === 'string'
+          ? JSON.parse(workflow.graph_json)
+          : workflow.graph_json;
+      } catch (e) {
+        console.error('Error parsing graph JSON:', e);
+        graphJson = { nodes: [], connections: [], triggers: [] };
+      }
+
+      // Load the graph into the editor
+      await editor.fromJSON(graphJson);
+
+      // Extract triggers from the graph
+      const triggers = graphJson.triggers || [];
+
+      // Update the workflow data
+      setWorkflowData({
+        id: workflow.id,
+        name: workflow.name || '',
+        description: workflow.description || '',
+        is_active: workflow.is_active !== undefined ? workflow.is_active : true,
+        triggers,
+      });
+
+      setSelectedWorkflowId(workflow.id);
+
+      toast({
+        title: 'Success',
+        description: 'Workflow loaded successfully',
+      });
     } catch (error) {
       console.error('Error loading workflow:', error);
-      alert('Failed to load workflow.');
+      toast({
+        title: 'Error',
+        description: 'Failed to load workflow',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const createNewWorkflow = () => {
+    if (!editor) return;
+
+    // Clear the editor
+    editor.clear();
+
+    // Reset the workflow data
+    setWorkflowData({
+      name: '',
+      description: '',
+      is_active: true,
+      triggers: [],
+    });
+
+    setSelectedWorkflowId(null);
+
+    // Update URL without reloading the page
+    window.history.pushState({}, '', '/automation/editor');
+
+    toast({
+      title: 'New Workflow',
+      description: 'Started a new workflow',
+    });
+  };
+
+  const handleAddTrigger = (trigger: Trigger) => {
+    setWorkflowData(prev => ({
+      ...prev,
+      triggers: [...prev.triggers, trigger],
+    }));
+  };
+
+  const handleUpdateTrigger = (triggerId: string, updatedTrigger: Trigger) => {
+    setWorkflowData(prev => ({
+      ...prev,
+      triggers: prev.triggers.map(t =>
+        t.id === triggerId ? updatedTrigger : t
+      ),
+    }));
+  };
+
+  const handleDeleteTrigger = (triggerId: string) => {
+    setWorkflowData(prev => ({
+      ...prev,
+      triggers: prev.triggers.filter(t => t.id !== triggerId),
+    }));
+  };
 
   return (
-    <div>
-      <div style={{ marginBottom: '10px' }}>
-        <button onClick={saveWorkflow} disabled={!editor}>Save Workflow</button>
-        <button onClick={loadWorkflow} disabled={!editor} style={{ marginLeft: '10px' }}>Load Workflow</button>
-      </div>
-      <div ref={editorRef} style={{ width: '100%', height: '500px', border: '1px solid #ccc' }}></div> {/* Dodano obramowanie dla lepszej widoczności */}
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Workflow Editor</CardTitle>
+              <CardDescription>
+                {workflowData.id
+                  ? `Editing workflow: ${workflowData.name}`
+                  : 'Create a new workflow'}
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={createNewWorkflow}>
+                New
+              </Button>
+              <Button
+                onClick={saveWorkflow}
+                disabled={!editor || isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="editor">Editor</TabsTrigger>
+              <TabsTrigger value="triggers">Triggers</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="details" className="space-y-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="workflow-name">Workflow Name</Label>
+                    <Input
+                      id="workflow-name"
+                      placeholder="Enter workflow name"
+                      value={workflowData.name}
+                      onChange={e => setWorkflowData(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="workflow-description">Description</Label>
+                    <Textarea
+                      id="workflow-description"
+                      placeholder="Enter workflow description"
+                      value={workflowData.description}
+                      onChange={e => setWorkflowData(prev => ({ ...prev, description: e.target.value }))}
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="workflow-active"
+                      checked={workflowData.is_active}
+                      onChange={e => setWorkflowData(prev => ({ ...prev, is_active: e.target.checked }))}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor="workflow-active">Active</Label>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="editor">
+              <div
+                ref={editorRef}
+                className="w-full h-[600px] border border-border rounded-md"
+              ></div>
+            </TabsContent>
+
+            <TabsContent value="triggers">
+              <TriggerPanel
+                triggers={workflowData.triggers}
+                onAddTrigger={handleAddTrigger}
+                onUpdateTrigger={handleUpdateTrigger}
+                onDeleteTrigger={handleDeleteTrigger}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {availableWorkflows.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Available Workflows</CardTitle>
+            <CardDescription>
+              Select a workflow to load and edit
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availableWorkflows.map(workflow => (
+                <Card
+                  key={workflow.id}
+                  className={`cursor-pointer hover:bg-muted/50 ${
+                    selectedWorkflowId === workflow.id ? 'border-primary' : ''
+                  }`}
+                  onClick={() => loadWorkflow(workflow.id)}
+                >
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">{workflow.name}</CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {workflow.description || 'No description'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-2">
+                    <p className="text-xs text-muted-foreground">
+                      Created: {new Date(workflow.created_at).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Status: {workflow.is_active ? 'Active' : 'Inactive'}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

@@ -1,11 +1,11 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '../../types/supabase'
 
 const DISABLE_AUTH = process.env.NEXT_PUBLIC_DISABLE_SUPABASE_AUTH === 'true'
 
 export const createClient = () => {
   if (DISABLE_AUTH) return null
-  
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -17,5 +17,14 @@ export const createClient = () => {
     return null
   }
 
-  return createClientComponentClient<Database>({ supabaseUrl, supabaseKey })
+  return createBrowserClient<Database>({
+    supabaseUrl,
+    supabaseKey,
+    cookieOptions: {
+      name: 'sb-auth',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/'
+    }
+  })
 }
