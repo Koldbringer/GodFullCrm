@@ -12,7 +12,8 @@ import { NotificationCenter } from "@/components/notifications/notification-cent
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ServiceOrdersKanban } from "@/components/service-orders/service-orders-kanban"
-import { createServerClient } from "@/lib/supabase"
+import { cookies } from 'next/headers'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export const metadata: Metadata = {
   title: "Zlecenia serwisowe - HVAC CRM ERP",
@@ -46,7 +47,8 @@ const fallbackData = [
 async function ServiceOrdersTable() {
   try {
     // Pobieranie danych bezpośrednio z Supabase w komponencie serwerowym
-    const supabase = await createServerClient()
+    const cookieStore = cookies()
+    const supabase = createServerComponentClient({ cookies: () => cookieStore })
 
     console.log("Fetching service orders data")
 
