@@ -5,6 +5,8 @@
 - Integracja z Supabase Auth
 - Szkielet modułu mapowania urządzeń
 - System ładowania stron (loading.tsx)
+- Strony-placeholdery dla Ustawień i Faktur
+- Podstawowa funkcjonalność przeciągnij i upuść w widoku Kanban zleceń serwisowych
 
 ## Otwarte zadania
 - [ ] Pełna integracja z mapami Leaflet
@@ -34,7 +36,8 @@
 - [plan_rozwoju_interfejsu.md](cci:7://file:///f:/Proejktowe/GodLikeCrmERP/Crm/plan_rozwoju_interfejsu.md:0:0-0:0) i [plan_rozwoju_interfejsu_v2.md](cci:7://file:///f:/Proejktowe/GodLikeCrmERP/Crm/plan_rozwoju_interfejsu_v2.md:0:0-0:0) (koncepcje UX/UI)
 
 ### Testy i CI/CD
-- Brak testów jednostkowych/integracyjnych.
+- Rozpoczęto prace nad testami jednostkowymi dla komponentów Kanban.
+- Brak testów integracyjnych/E2E.
 - Brak pipeline’u budującego/deployującego (GitHub Actions, Vercel).
 
 ### 3. Ocena jakości kodu

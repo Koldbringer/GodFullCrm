@@ -28,11 +28,11 @@ The Pragmatic drag and drop packages are published under the @atlaskit namespace
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 ### Pragmatic Drag and Drop
 
-Biblioteka do implementacji funkcji przeciągnij i upuść. Umożliwia tworzenie przeciągalnych elementów, celów upuszczania oraz monitorowanie operacji drag and drop. Posiada wsparcie dla React/TypeScript i narzędzia do testowania.
+Biblioteka do implementacji funkcji przeciągnij i upuść. Umożliwia tworzenie przeciągalnych elementów, celów upuszczania oraz monitorowanie operacji drag and drop. Wykorzystana do wdrożenia funkcjonalności przeciągnij i upuść w widoku Kanban zleceń serwisowych. Posiada wsparcie dla React/TypeScript i narzędzia do testowania.
 
-- Implementacja `draggable` dla elementów.
-- Tworzenie `dropTargetForElements` z walidacją typu.
-- Użycie `monitorForElements` do globalnego śledzenia.
+- Implementacja `draggable` dla elementów (kart zleceń serwisowych).
+- Tworzenie `dropTargetForElements` z walidacją typu (kolumny Kanban).
+- Użycie `monitorForElements` do globalnego śledzenia operacji przeciągania i upuszczania.
 - Przykłady testowania z Cypress i Testing Library.
 - Wskazówki dotyczące typowania danych (np. z użyciem Symboli).
 - Optymalizacje dla React.

@@ -12,6 +12,7 @@ import { IotMonitoringPanel } from "@/components/dashboard/iot-monitoring-panel"
 import { TechnicianPerformance } from "@/components/dashboard/technician-performance"
 import { BusinessMetrics } from "@/components/dashboard/business-metrics"
 import { UpcomingTasks } from "@/components/dashboard/upcoming-tasks"
+import { AutomationStatusPanel } from "@/components/dashboard/automation-status-panel"
 
 export const metadata: Metadata = {
   title: "Dashboard - HVAC CRM ERP",
@@ -110,6 +111,7 @@ export default function DashboardPage() {
           {/* Kolumna 3 */}
           <div className="space-y-4">
             <UpcomingTasks />
+            <AutomationStatusPanel />
           </div>
         </div>
       </div>

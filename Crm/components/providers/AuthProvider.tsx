@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { Session, User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 
+
 type AuthContextType = {
   user: User | null
   session: Session | null
@@ -27,6 +28,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
+
+  // Handle disabled auth mode
+  if (!supabase) {
+    return (
+      <AuthContext.Provider value={{
+        user: null,
+        session: null,
+        isLoading: false,
+        signOut: async () => {}
+      }}>
+        {children}
+      </AuthContext.Provider>
+    )
+  }
 
   useEffect(() => {
     const getSession = async () => {

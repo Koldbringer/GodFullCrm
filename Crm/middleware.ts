@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
-import { Database } from '@/types/supabase'
+import type { Database } from '../types/supabase'
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
+
+  if (process.env.NEXT_PUBLIC_DISABLE_SUPABASE_AUTH === 'true') {
+    return res
+  }
 
   try {
     // Create a middleware client
