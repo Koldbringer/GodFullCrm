@@ -1,4 +1,4 @@
-// Export only client-safe Supabase clients
-// Server client should be imported directly in server components
+// Export Supabase clients
 export { createClient } from './client'
 export { createRouteClient } from './route'
+export { createClient as createServerClient } from './server'

@@ -8,15 +8,10 @@ import { UserNav } from "@/components/user-nav"
 import { MainNav } from "@/components/main-nav"
 import { Search } from "@/components/search"
 import { NotificationCenter } from "@/components/notifications/notification-center"
-import { AiInsightsPanel } from "@/components/dashboard/ai-insights-panel"
-import { IotMonitoringPanel } from "@/components/dashboard/iot-monitoring-panel"
-import { TechnicianPerformance } from "@/components/dashboard/technician-performance"
-import { BusinessMetrics } from "@/components/dashboard/business-metrics"
-import { UpcomingTasks } from "@/components/dashboard/upcoming-tasks"
-import { AutomationStatusPanel } from "@/components/dashboard/automation-status-panel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { createServerClient } from "@/lib/supabase/server"
 import Link from "next/link"
+import { DashboardClient } from "@/components/dashboard/dashboard-client"
 
 export const metadata: Metadata = {
   title: "Dashboard - HVAC CRM ERP",
@@ -387,26 +382,8 @@ export default function DashboardPage() {
           </Suspense>
         </div>
 
-        {/* Główne panele */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* Kolumna 1 */}
-          <div className="space-y-4">
-            <AiInsightsPanel />
-            <BusinessMetrics />
-          </div>
-
-          {/* Kolumna 2 */}
-          <div className="space-y-4">
-            <IotMonitoringPanel />
-            <TechnicianPerformance />
-          </div>
-
-          {/* Kolumna 3 */}
-          <div className="space-y-4">
-            <UpcomingTasks />
-            <AutomationStatusPanel />
-          </div>
-        </div>
+        {/* Główne panele - używamy komponentu klienta z preferencjami użytkownika */}
+        <DashboardClient />
       </div>
     </div>
   )

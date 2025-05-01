@@ -1,12 +1,15 @@
 // This file should only be imported by server components
-import { createServerClient as createClient } from '@supabase/ssr'
+import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/supabase'
 import { SUPABASE_CONFIG } from './config'
+import { SupabaseClient } from '@supabase/supabase-js'
 
-export const createServerClient = () => {
-  const cookieStore = cookies()
-
+/**
+ * Creates a Supabase client for server components
+ * Uses the latest @supabase/ssr package for better Next.js integration
+ */
+export const createClient = async (): Promise<SupabaseClient<Database> | null> => {
   // Check if Supabase is configured
   if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey) {
     if (process.env.NODE_ENV === 'production') {
@@ -17,46 +20,42 @@ export const createServerClient = () => {
   }
 
   try {
-    console.log('Creating server client with URL:', SUPABASE_CONFIG.url)
+    // Get cookies from the Next.js cookies() API
+    const cookieStore = cookies()
 
-    return createClient<Database>({
-      supabaseUrl: SUPABASE_CONFIG.url,
-      supabaseKey: SUPABASE_CONFIG.anonKey,
-      cookies: {
-        get(name) {
-          try {
-            const cookie = cookieStore.get(name)
-            if (cookie) {
-              console.log(`Server: Reading cookie ${name}: found`)
+    // Create a Supabase client for server-side use with proper cookie handling
+    return createSupabaseServerClient<Database>(
+      SUPABASE_CONFIG.url,
+      SUPABASE_CONFIG.anonKey,
+      {
+        cookies: {
+          get(name) {
+            return cookieStore.get(name)?.value
+          },
+          set(name, value, options) {
+            try {
+              cookieStore.set({ name, value, ...options })
+            } catch (error) {
+              // Handle cookie setting errors in read-only contexts
+              console.warn('Could not set cookie in read-only context:', error)
             }
-            return cookie?.value
-          } catch (error) {
-            console.error(`Server: Error reading cookie ${name}:`, error)
-            return undefined
-          }
-        },
-        set(name, value, options) {
-          try {
-            console.log(`Server: Setting cookie ${name}`)
-            cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            // This can happen when attempting to set cookies in middleware
-            console.error(`Server: Error setting cookie ${name}:`, error)
-          }
-        },
-        remove(name, options) {
-          try {
-            console.log(`Server: Removing cookie ${name} - DISABLED`)
-            // Intentionally not removing cookies to prevent session loss
-            // cookieStore.set({ name, value: '', ...options, maxAge: 0 })
-          } catch (error) {
-            console.error(`Server: Error removing cookie ${name}:`, error)
+          },
+          remove(name, options) {
+            try {
+              cookieStore.set({ name, value: '', ...options, maxAge: 0 })
+            } catch (error) {
+              // Handle cookie removal errors in read-only contexts
+              console.warn('Could not remove cookie in read-only context:', error)
+            }
           }
         }
       }
-    })
+    )
   } catch (error) {
     console.error('Error creating Supabase server client:', error)
     return null
   }
 }
+
+// Alias for createClient to maintain compatibility with existing code
+export const createServerClient = createClient;

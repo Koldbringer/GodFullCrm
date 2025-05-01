@@ -1,19 +1,47 @@
-// import { createMDX } from 'fumadocs-mdx/next';
 import withPWA from '@ducanh2912/next-pwa';
+import { createMDX } from 'fumadocs-mdx/next';
 
-// const withMDX = createMDX();
+// Create MDX plugin for documentation
+const withMDX = createMDX();
 
-/** @type {import('next').NextConfig} */
+/**
+ * Next.js configuration with optimizations for performance and security
+ * @type {import('next').NextConfig}
+ */
 const nextConfig = {
+  // Disable ESLint and TypeScript checking during build for faster builds
+  // These should be run separately in CI/CD pipeline
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
   },
+
+  // Image optimization settings
   images: {
-    unoptimized: true,
+    // Use Next.js image optimization in production
+    unoptimized: process.env.NODE_ENV === 'development',
+    // Add remote image domains if needed
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'acfyvozuelayjdhmdtky.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      }
+    ],
   },
+
+  // Performance optimizations
+  swcMinify: true, // Use SWC minifier for better performance
+  reactStrictMode: true, // Enable React strict mode for better development experience
+
+  // Add compression for better performance
+  compress: true,
+
   // Add headers for better security and PWA support
   headers: async () => [
     {
@@ -31,21 +59,66 @@ const nextConfig = {
           key: 'X-XSS-Protection',
           value: '1; mode=block',
         },
+        {
+          key: 'Referrer-Policy',
+          value: 'strict-origin-when-cross-origin',
+        },
+        {
+          key: 'Permissions-Policy',
+          value: 'camera=(), microphone=(), geolocation=(self), interest-cohort=()',
+        },
+      ],
+    },
+    // Cache static assets for better performance
+    {
+      source: '/static/(.*)',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=31536000, immutable',
+        }
+      ],
+    },
+    // Cache images for better performance
+    {
+      source: '/images/(.*)',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=86400, stale-while-revalidate=31536000',
+        }
       ],
     },
   ],
+
+  // Experimental features for better performance
+  experimental: {
+    // Enable server actions
+    serverActions: true,
+    // Enable optimistic updates
+    optimisticClientCache: true,
+    // Enable app directory
+    appDir: true,
+  },
 }
 
+// PWA configuration
 const pwaOptions = {
   dest: 'public',
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-  // Optionally, you can customize the service worker
+  // Customize the service worker
   sw: '/sw.js',
-  // Optionally, you can add additional manifests
-  // buildExcludes: [/middleware-manifest\.json$/],
+  // Exclude specific files from the service worker
+  buildExcludes: [
+    /middleware-manifest\.json$/,
+    /\.map$/,
+    /^workbox-[a-zA-Z0-9]+\.js$/
+  ],
+  // Add additional manifests if needed
+  // additionalManifestEntries: [],
 };
 
-// export default withMDX(nextConfig);
-export default withPWA(pwaOptions)(nextConfig);
+// Apply both MDX and PWA plugins
+export default withPWA(pwaOptions)(withMDX(nextConfig));

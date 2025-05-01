@@ -4,7 +4,16 @@ export default async function AuthDebugPage() {
   const supabase = await createClient()
 
   // Get the current session
-  const { data: { session }, error } = await supabase.auth.getSession()
+  let session = null
+  let error = null
+
+  if (supabase) {
+    const result = await supabase.auth.getSession()
+    session = result.data.session
+    error = result.error
+  } else {
+    error = { message: 'Failed to create Supabase client' }
+  }
 
   // Get all cookies for debugging
   const cookieStore = await import('next/headers').then(mod => mod.cookies())

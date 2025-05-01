@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MapView } from "@/components/map/map-view"
 import { MapViewClient } from "./map-client"
 import { MapViewClientClustered } from "./map-client-clustered"
-import { createServerClient } from "@/lib/supabase"
+import { createMapServerClient } from "@/lib/supabase/map-server"
 import { MapFilters } from "./map-filters"
 import { AddSampleDataButton } from "@/components/map/add-sample-data-button"
 import { GeocodeAddressesButton } from "@/components/map/geocode-addresses-button"
@@ -35,7 +35,7 @@ async function getMapData({
   siteType?: string
   serviceStatus?: string
 } = {}) {
-  const supabase = await createServerClient()
+  const supabase = await createMapServerClient()
 
   if (!supabase) {
     console.error("Failed to create Supabase client.");
@@ -243,33 +243,33 @@ export default async function MapPage({
   searchParams: { [key: string]: string | string[] | undefined } | Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   // Await searchParams if it's a Promise (as required in Next.js 14+)
-  const params = await (typeof (searchParams as any)?.then === 'function' 
-    ? searchParams 
+  const params = await (typeof (searchParams as any)?.then === 'function'
+    ? searchParams
     : Promise.resolve(searchParams));
 
   // Extract filter parameters from URL - convert to proper types
-  const district = (params && (Array.isArray(params.district) 
-    ? params.district[0] 
+  const district = (params && (Array.isArray(params.district)
+    ? params.district[0]
     : params.district)) ?? 'all';
-  
-  const limitStr = (params && (Array.isArray(params.limit) 
-    ? params.limit[0] 
+
+  const limitStr = (params && (Array.isArray(params.limit)
+    ? params.limit[0]
     : params.limit)) ?? '100';
-  
+
   const limit = parseInt(limitStr) || 100;
-  
-  const customerType = (params && (Array.isArray(params.customerType) 
-    ? params.customerType[0] 
+
+  const customerType = (params && (Array.isArray(params.customerType)
+    ? params.customerType[0]
     : params.customerType)) ?? 'all';
-  
-  const siteType = (params && (Array.isArray(params.siteType) 
-    ? params.siteType[0] 
+
+  const siteType = (params && (Array.isArray(params.siteType)
+    ? params.siteType[0]
     : params.siteType)) ?? 'all';
-  
-  const serviceStatus = (params && (Array.isArray(params.serviceStatus) 
-    ? params.serviceStatus[0] 
+
+  const serviceStatus = (params && (Array.isArray(params.serviceStatus)
+    ? params.serviceStatus[0]
     : params.serviceStatus)) ?? 'all';
-  
+
   // Get data with filters
   const {
     technicians,

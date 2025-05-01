@@ -9,6 +9,10 @@ const sidebarNavItems = [
     href: '/settings/general',
   },
   {
+    title: 'Preferencje Użytkownika',
+    href: '/settings/preferences',
+  },
+  {
     title: 'Użytkownicy i Role',
     href: '/settings/users',
   },

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createRouteClient } from '@/lib/supabase/route'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -10,7 +10,11 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get('code')
 
   if (code) {
-    const supabase = await createClient()
+    const supabase = await createRouteClient()
+
+    if (!supabase) {
+      return NextResponse.redirect(new URL('/login?error=auth_error', request.url))
+    }
 
     // Exchange the code for a session
     await supabase.auth.exchangeCodeForSession(code)

@@ -42,7 +42,7 @@ import { CustomerFiles } from "@/components/customers/customer-files"
 import { CustomerTranscriptions } from "@/components/customers/customer-transcriptions"
 import { CustomerAudioManager } from "@/components/customers/customer-audio-manager"
 import { NotificationCenter } from "@/components/notifications/notification-center"
-import { createClient } from "@/lib/supabase"
+import { createServerClient } from "@/lib/supabase/server"
 import { EditCustomerForm } from "@/components/customers/edit-customer-form"
 
 export const metadata: Metadata = {
@@ -51,17 +51,54 @@ export const metadata: Metadata = {
 }
 
 // Define explicit types based on Database interface
-type ServiceOrder = Pick<Database['public']['Tables']['service_orders']['Row'], 'id' | 'title' | 'status' | 'scheduled_date' | 'priority'>
-type Invoice = Pick<Database['public']['Tables']['invoices']['Row'], 'id' | 'invoice_number' | 'issue_date' | 'due_date' | 'total_amount' | 'status'>
+type ServiceOrder = {
+  id: string
+  title?: string
+  status: string | null
+  scheduled_date?: string
+  priority?: string
+  scheduled_start?: string | null
+  service_type?: string | null
+}
 
+type Invoice = {
+  id: string
+  invoice_number: string
+  issue_date: string
+  due_date: string
+  total_amount: number
+  status: string
+}
+
+// Extended customer type with additional fields from the fallback data
 type EnhancedCustomerProfile = Database['public']['Tables']['customers']['Row'] & {
-  sites: Pick<Database['public']['Tables']['sites']['Row'], 'id' | 'name' | 'street' | 'city' | 'zip_code' | 'type' | 'status'>[] | null
+  // Additional fields from database
+  sites: Database['public']['Tables']['sites']['Row'][] | null
   service_orders: ServiceOrder[]
   invoices: Invoice[]
   total_service_orders: number
   total_invoices: number
   total_spent: number
   payment_status: string
+
+  // Additional fields from fallback data
+  tax_id?: string
+  address?: string
+  city?: string
+  postal_code?: string
+  type?: string
+  industry?: string
+  website?: string
+  customer_since?: string
+  status?: string
+  referral_source?: string
+  company_size?: number
+  annual_revenue?: number
+  payment_terms?: string
+  credit_limit?: number
+  social_media_links?: Record<string, string>
+  logo_url?: string
+  notes?: string
 }
 
 // Dane zastępcze na wypadek błędu API
@@ -103,23 +140,27 @@ const fallbackCustomerData = {
   payment_status: "Nieznany", // Default payment status
 }
 
-async function getCustomer(id: string): Promise<EnhancedCustomerProfile | null> { // Updated return type
+async function getCustomer(id: string): Promise<EnhancedCustomerProfile | null> {
   try {
     // Użyj klienta serwerowego do pobierania danych
     const supabase = await createServerClient()
 
+    if (!supabase) {
+      console.error("Failed to create Supabase client")
+      return null
+    }
+
     console.log(`Fetching customer data for ID: ${id}`)
 
     // Wykonaj zapytanie do bazy danych tylko z istniejącymi relacjami
-    // Sprawdzamy, które tabele istnieją w bazie danych
     const { data, error } = await supabase
       .from('customers')
       .select(`
         *,
-        sites(id, name, street, city, zip_code, type, status)
+        sites(*)
       `)
-      .filter('id', 'eq', id) // Use string directly, Supabase client should handle it
-      .single() // Removed explicit generic type <CustomerWithSites>
+      .eq('id', id)
+      .single()
 
     // Refined check for error or null data
     if (error || !data) {
@@ -127,59 +168,57 @@ async function getCustomer(id: string): Promise<EnhancedCustomerProfile | null> 
       return null
     }
 
-    // At this point, 'data' is inferred type based on select
-
     // Pobierz dodatkowe dane, jeśli są dostępne
-    let serviceOrders: ServiceOrder[] = [] // Use defined type
-    let invoices: Invoice[] = [] // Use defined type
+    let serviceOrders: ServiceOrder[] = []
+    let invoices: Invoice[] = []
 
     // Próba pobrania zleceń serwisowych
     try {
       const { data: ordersData, error: ordersError } = await supabase
         .from('service_orders')
-        .select('id, title, status, scheduled_date, priority')
-        .filter('customer_id', 'eq', id) // Removed 'as string' cast
+        .select('id, status, scheduled_start, service_type')
+        .eq('customer_id', id)
 
       if (ordersError) throw ordersError;
       if (ordersData) {
-        serviceOrders = ordersData as ServiceOrder[];
+        // Map to ServiceOrder type with additional fields
+        serviceOrders = ordersData.map(order => ({
+          id: order.id,
+          status: order.status,
+          scheduled_date: order.scheduled_start || undefined,
+          scheduled_start: order.scheduled_start,
+          service_type: order.service_type,
+          title: `Zlecenie ${order.service_type || 'serwisowe'}`,
+          priority: 'Normal'
+        }));
       }
     } catch (e) {
       console.log('Tabela service_orders nie istnieje lub wystąpił błąd:', e)
     }
 
-    // Próba pobrania faktur
-    try {
-      const { data: invoicesData, error: invoicesError } = await supabase
-        .from('invoices')
-        .select('id, invoice_number, issue_date, due_date, total_amount, status')
-        .filter('customer_id', 'eq', id) // Removed 'as string' cast
+    // Faktur nie ma w bazie danych, więc używamy pustej tablicy
+    // W przyszłości można dodać tabelę faktur
 
-      if (invoicesError) throw invoicesError;
-      if (invoicesData) {
-        invoices = invoicesData as Invoice[];
-      }
-    } catch (e) {
-      console.log('Tabela invoices nie istnieje lub wystąpił błąd:', e)
-    }
-
-    const d = data as any;
-
-    // Create the enhanced customer object conforming to EnhancedCustomerProfile
+    // Create the enhanced customer object
     const enhancedCustomer: EnhancedCustomerProfile = {
       // Spread all properties from the fetched customer data
-      ...d,
+      ...data,
       // Ensure related data arrays are not null
-      sites: d.sites || [],
+      sites: data.sites || [],
       // Add calculated fields
       service_orders: serviceOrders,
       invoices: invoices,
       total_service_orders: serviceOrders.length,
       total_invoices: invoices.length,
       total_spent: invoices.reduce((acc, invoice) => acc + (invoice.total_amount || 0), 0),
-      payment_status: invoices.some((inv) => inv.status === 'Zaległa') ? 'Zaległy' : 'Terminowy',
-      // Ensure all required fields from customers.Row are present (already spread from data)
-      // updated_at: data.updated_at, // Already included via spread
+      payment_status: 'Terminowy',
+
+      // Add fallback fields that might not be in the database
+      tax_id: data.nip || '',
+      status: 'Aktywny',
+      type: 'Biznesowy',
+      notes: '',
+      customer_since: data.created_at || new Date().toISOString()
     }
 
     console.log(`Fetched customer data: ${enhancedCustomer.name}`)
@@ -191,8 +230,7 @@ async function getCustomer(id: string): Promise<EnhancedCustomerProfile | null> 
 }
 
 export default async function CustomerDetailsPage({ params }: { params: { id: string } }) {
-  const resolvedParams = await params
-  const customerId = resolvedParams.id
+  const customerId = params.id
 
   // Pobierz dane klienta z API
   // Use the new EnhancedCustomerProfile type
@@ -238,7 +276,7 @@ export default async function CustomerDetailsPage({ params }: { params: { id: st
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href={`tel:${customer.phone.replace(/\s/g, "")}`}> {/* Phone is string, no cast needed */}
+              <Link href={`tel:${customer.phone ? customer.phone.replace(/\s/g, "") : ""}`}>
                 <Phone className="mr-2 h-4 w-4" />
                 Telefon
               </Link>
@@ -392,7 +430,7 @@ export default async function CustomerDetailsPage({ params }: { params: { id: st
                       )}
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Klient od:</span>
-                        <span>{new Date(customer.customer_since || customer.created_at).toLocaleDateString("pl-PL")}</span>
+                        <span>{new Date(customer.customer_since || customer.created_at || Date.now()).toLocaleDateString("pl-PL")}</span>
                       </div>
                       {customer.social_media_links && Object.keys(customer.social_media_links).length > 0 && (
                         <div className="flex items-center justify-between">
@@ -570,11 +608,11 @@ export default async function CustomerDetailsPage({ params }: { params: { id: st
             {/* Ensure initialData matches the expected type for EditCustomerForm */}
             <EditCustomerForm initialData={{
               id: customer.id,
-              name: customer.name,
+              name: customer.name || "",
               tax_id: customer.tax_id ?? undefined, // Handle null for tax_id
-              email: customer.email,
-              phone: customer.phone,
-              type: customer.type as "Biznesowy" | "Indywidualny", // Explicitly cast type
+              email: customer.email || "",
+              phone: customer.phone || "",
+              type: (customer.type as "Biznesowy" | "Indywidualny") || "Biznesowy", // Explicitly cast type
             }} />
           </TabsContent>
         </Tabs>

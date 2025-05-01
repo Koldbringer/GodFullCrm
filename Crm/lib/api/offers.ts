@@ -9,6 +9,11 @@ export type OfferProduct = {
   description: string;
   price: number;
   quantity: number;
+  discount_percentage?: number;
+  original_price?: number;
+  stock_status?: 'in_stock' | 'low_stock' | 'out_of_stock';
+  features?: string[];
+  image?: string;
 };
 
 export type OfferService = {
@@ -102,7 +107,7 @@ export async function createOffer(data: CreateOfferData) {
 
     // 3. Create offer products
     for (const product of option.products) {
-      const { error: productError } = await supabase.from("offer_products").insert({
+      const productData: any = {
         offer_option_id: optionId,
         inventory_id: product.inventory_id,
         name: product.name,
@@ -111,7 +116,30 @@ export async function createOffer(data: CreateOfferData) {
         quantity: product.quantity,
         created_at: timestamp,
         updated_at: timestamp,
-      });
+      };
+
+      // Add optional fields if they exist
+      if (product.discount_percentage) {
+        productData.discount_percentage = product.discount_percentage;
+      }
+
+      if (product.original_price) {
+        productData.original_price = product.original_price;
+      }
+
+      if (product.stock_status) {
+        productData.stock_status = product.stock_status;
+      }
+
+      if (product.features && product.features.length > 0) {
+        productData.features = JSON.stringify(product.features);
+      }
+
+      if (product.image) {
+        productData.image_url = product.image;
+      }
+
+      const { error: productError } = await supabase.from("offer_products").insert(productData);
 
       if (productError) {
         console.error("Error creating offer product:", productError);
@@ -181,7 +209,7 @@ export async function getOfferByToken(token: string) {
       .from("offers")
       .update({ status: "expired", updated_at: new Date().toISOString() })
       .eq("id", offer.id);
-    
+
     offer.status = "expired";
   }
 
@@ -214,7 +242,12 @@ export async function getOfferByToken(token: string) {
           name,
           description,
           price,
-          quantity
+          quantity,
+          discount_percentage,
+          original_price,
+          stock_status,
+          features,
+          image_url
         `)
         .eq("offer_option_id", option.id);
 

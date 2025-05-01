@@ -55,6 +55,11 @@ const formSchema = z.object({
           description: z.string(),
           price: z.number().min(0),
           quantity: z.number().int().min(1),
+          discount_percentage: z.number().int().min(0).max(100).optional(),
+          original_price: z.number().min(0).optional(),
+          stock_status: z.enum(['in_stock', 'low_stock', 'out_of_stock']).optional(),
+          features: z.array(z.string()).optional(),
+          image: z.string().optional(),
         })
       ).min(1, "Dodaj co najmniej jeden produkt"),
       services: z.array(
@@ -83,6 +88,9 @@ type InventoryItem = {
   item_name: string;
   description: string;
   price: number;
+  quantity_in_stock: number;
+  features?: string | string[];
+  image_url?: string | null;
 };
 
 type Service = {
@@ -119,6 +127,8 @@ export function OfferGenerator() {
               description: "",
               price: 0,
               quantity: 1,
+              features: [],
+              stock_status: "in_stock",
             },
           ],
           services: [
@@ -180,28 +190,41 @@ export function OfferGenerator() {
       // Fetch inventory
       const { data: inventoryData, error: inventoryError } = await supabase
         .from("inventory")
-        .select("id, item_name, description, price")
+        .select("id, item_name, description, quantity, unit, location")
         .order("item_name");
 
       if (inventoryError) {
         console.error("Error fetching inventory:", inventoryError);
         toast.error("Błąd podczas pobierania listy produktów");
       } else {
-        setInventory(inventoryData || []);
+        // Transform the data to include the fields we need
+        const transformedInventory = (inventoryData || []).map(item => ({
+          id: item.id,
+          item_name: item.item_name || "",
+          description: item.description || "",
+          price: 0, // Default price since it's not in the schema
+          quantity_in_stock: item.quantity || 0,
+          features: [],
+          image_url: null
+        }));
+        setInventory(transformedInventory);
       }
 
-      // Fetch services
-      const { data: servicesData, error: servicesError } = await supabase
-        .from("services")
-        .select("id, name, description, price")
-        .order("name");
+      // Use sample services data since there's no services table yet
+      const sampleServices = [
+        { id: "s1", name: "Montaż klimatyzacji ściennej", description: "Standardowy montaż jednostki ściennej", price: 800 },
+        { id: "s2", name: "Montaż klimatyzacji kanałowej", description: "Montaż jednostki kanałowej z podłączeniem", price: 1500 },
+        { id: "s3", name: "Montaż klimatyzacji kasetonowej", description: "Montaż jednostki kasetonowej w suficie podwieszanym", price: 1200 },
+        { id: "s4", name: "Montaż klimatyzacji przypodłogowej", description: "Montaż jednostki przypodłogowej", price: 900 },
+        { id: "s5", name: "Montaż klimatyzacji multi-split", description: "Montaż systemu multi-split z kilkoma jednostkami", price: 2000 },
+        { id: "s6", name: "Instalacja rurociągu chłodniczego", description: "Dodatkowa instalacja rurociągu chłodniczego", price: 150 },
+        { id: "s7", name: "Wykonanie odpływu skroplin", description: "Instalacja odpływu skroplin", price: 100 },
+        { id: "s8", name: "Wykonanie przebicia przez ścianę", description: "Wykonanie otworu w ścianie na instalację", price: 120 },
+        { id: "s9", name: "Montaż sterownika przewodowego", description: "Instalacja i konfiguracja sterownika przewodowego", price: 200 },
+        { id: "s10", name: "Uruchomienie i test systemu", description: "Pierwsze uruchomienie i testowanie systemu", price: 250 },
+      ];
 
-      if (servicesError) {
-        console.error("Error fetching services:", servicesError);
-        toast.error("Błąd podczas pobierania listy usług");
-      } else {
-        setServices(servicesData || []);
-      }
+      setServices(sampleServices);
 
       setIsLoading(false);
     };
@@ -216,6 +239,33 @@ export function OfferGenerator() {
       form.setValue(`options.${optionIndex}.products.${productIndex}.name`, selectedProduct.item_name);
       form.setValue(`options.${optionIndex}.products.${productIndex}.description`, selectedProduct.description);
       form.setValue(`options.${optionIndex}.products.${productIndex}.price`, selectedProduct.price);
+
+      // Set stock status based on quantity in inventory
+      if (selectedProduct.quantity_in_stock > 10) {
+        form.setValue(`options.${optionIndex}.products.${productIndex}.stock_status`, 'in_stock');
+      } else if (selectedProduct.quantity_in_stock > 0) {
+        form.setValue(`options.${optionIndex}.products.${productIndex}.stock_status`, 'low_stock');
+      } else {
+        form.setValue(`options.${optionIndex}.products.${productIndex}.stock_status`, 'out_of_stock');
+      }
+
+      // Set features if available
+      if (selectedProduct.features) {
+        try {
+          const featuresArray = typeof selectedProduct.features === 'string'
+            ? JSON.parse(selectedProduct.features)
+            : selectedProduct.features;
+
+          form.setValue(`options.${optionIndex}.products.${productIndex}.features`, featuresArray);
+        } catch (e) {
+          console.error("Error parsing product features:", e);
+        }
+      }
+
+      // Set image if available
+      if (selectedProduct.image_url) {
+        form.setValue(`options.${optionIndex}.products.${productIndex}.image`, selectedProduct.image_url);
+      }
     }
   };
 
@@ -234,7 +284,15 @@ export function OfferGenerator() {
       title: `Pakiet ${optionFields.length + 1}`,
       description: "Opis pakietu",
       is_recommended: false,
-      products: [{ inventory_id: "", name: "", description: "", price: 0, quantity: 1 }],
+      products: [{
+        inventory_id: "",
+        name: "",
+        description: "",
+        price: 0,
+        quantity: 1,
+        features: [],
+        stock_status: "in_stock"
+      }],
       services: [{ service_id: "", name: "", description: "", price: 0 }],
     });
 
@@ -593,24 +651,67 @@ export function OfferGenerator() {
                                 )}
                               />
 
-                              <FormField
-                                control={form.control}
-                                name={`options.${optionIndex}.products.${productIndex}.quantity`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Ilość</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        type="number"
-                                        min={1}
-                                        {...field}
-                                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField
+                                  control={form.control}
+                                  name={`options.${optionIndex}.products.${productIndex}.quantity`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Ilość</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          min={1}
+                                          {...field}
+                                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name={`options.${optionIndex}.products.${productIndex}.discount_percentage`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Zniżka (%)</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          max={100}
+                                          placeholder="0"
+                                          {...field}
+                                          value={field.value || ""}
+                                          onChange={(e) => {
+                                            const value = e.target.value === "" ? undefined : parseInt(e.target.value);
+                                            field.onChange(value);
+
+                                            // If discount is added, save original price
+                                            if (value && value > 0) {
+                                              const currentPrice = form.getValues(`options.${optionIndex}.products.${productIndex}.price`);
+                                              const originalPrice = form.getValues(`options.${optionIndex}.products.${productIndex}.original_price`);
+
+                                              if (!originalPrice) {
+                                                form.setValue(
+                                                  `options.${optionIndex}.products.${productIndex}.original_price`,
+                                                  currentPrice
+                                                );
+                                              }
+                                            }
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        Opcjonalna zniżka dla tego produktu
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
                             </div>
                           ))}
                           <Button
@@ -624,6 +725,8 @@ export function OfferGenerator() {
                                 description: "",
                                 price: 0,
                                 quantity: 1,
+                                features: [],
+                                stock_status: "in_stock",
                               })
                             }
                           >

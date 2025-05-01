@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createMCPClient, createAgent, generateResponse, disconnectMCP } from '@/lib/mcp/client';
 
+/**
+ * AI Analysis API endpoint
+ * Uses Mastra MCP with OpenAI to provide AI-powered analysis
+ */
 export async function POST(request: Request) {
+  let mcp = null;
+
   try {
-    const { message } = await request.json();
+    const { message, data } = await request.json();
 
     if (!message) {
       return NextResponse.json(
@@ -12,14 +19,51 @@ export async function POST(request: Request) {
       );
     }
 
-    // In a production environment, you would call an actual AI service like OpenAI here
-    // For now, we'll simulate an AI response
+    // Create an MCP client
+    mcp = await createMCPClient();
 
-    // Extract some keywords from the message to make the response seem more relevant
-    const keywords = extractKeywords(message);
+    // Create an agent with the MCP tools
+    const agent = await createAgent(mcp, `You are an AI assistant for a CRM/ERP system focused on HVAC services.
+    You analyze data and provide insights to help the business improve.
+    Always format your responses as structured JSON with insights, recommendations, and metrics when appropriate.
+    Use the available tools to search the database and analyze data.`);
 
-    // Generate a simulated AI response
-    const aiResponse = generateSimulatedResponse(message, keywords);
+    // Determine the appropriate prompt based on the message and data
+    let prompt = message;
+
+    // If data is provided, include it in the prompt
+    if (data) {
+      prompt += `\n\nHere is the data to analyze:\n${JSON.stringify(data, null, 2)}`;
+    }
+
+    // Generate a response using the agent
+    const response = await agent.generate(prompt);
+
+    // Parse the response text to extract JSON if possible
+    let aiResponse;
+    try {
+      // Check if the response contains a JSON object
+      const jsonMatch = response.text.match(/```json\n([\s\S]*?)\n```/) ||
+                        response.text.match(/```\n([\s\S]*?)\n```/) ||
+                        response.text.match(/{[\s\S]*?}/);
+
+      if (jsonMatch) {
+        aiResponse = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+      } else {
+        // If no JSON found, create a simple structure
+        aiResponse = {
+          summary: response.text,
+          insights: extractInsights(response.text),
+          recommendations: extractRecommendations(response.text)
+        };
+      }
+    } catch (parseError) {
+      console.error('Error parsing AI response:', parseError);
+      aiResponse = {
+        summary: response.text,
+        rawResponse: response.text
+      };
+    }
 
     // Log the analysis request to the database
     await logAnalysisRequest(message, aiResponse);
@@ -34,121 +78,112 @@ export async function POST(request: Request) {
       { error: 'Failed to analyze data', details: String(error) },
       { status: 500 }
     );
+  } finally {
+    // Disconnect from the MCP server
+    if (mcp) {
+      try {
+        await disconnectMCP(mcp);
+      } catch (disconnectError) {
+        console.error('Error disconnecting from MCP server:', disconnectError);
+      }
+    }
   }
 }
 
 /**
- * Extract keywords from a message
+ * Extract insights from the response text
  */
-function extractKeywords(message: string): string[] {
-  // Simple keyword extraction - in a real implementation, you would use NLP
-  const commonWords = new Set([
-    'the', 'and', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'about',
-    'as', 'of', 'that', 'this', 'these', 'those', 'is', 'are', 'was', 'were', 'be',
-    'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
-    'shall', 'should', 'may', 'might', 'must', 'can', 'could', 'data', 'analyze',
-    'following', 'instructions', 'according'
-  ]);
+function extractInsights(text: string): string[] {
+  const insights = [];
 
-  return message
-    .toLowerCase()
-    .replace(/[^\w\s]/g, '')
-    .split(/\s+/)
-    .filter(word => word.length > 3 && !commonWords.has(word))
-    .slice(0, 10);
+  // Look for patterns like "Insight:" or "Key finding:" or bullet points
+  const lines = text.split('\n');
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    if (
+      trimmedLine.match(/^(insight|finding|observation|analysis):/i) ||
+      trimmedLine.match(/^[•\-\*]\s+/) ||
+      trimmedLine.match(/^\d+\.\s+/)
+    ) {
+      // Clean up the line
+      const cleanLine = trimmedLine
+        .replace(/^(insight|finding|observation|analysis):/i, '')
+        .replace(/^[•\-\*]\s+/, '')
+        .replace(/^\d+\.\s+/, '')
+        .trim();
+
+      if (cleanLine) {
+        insights.push(cleanLine);
+      }
+    }
+  }
+
+  // If no insights were found, try to extract sentences
+  if (insights.length === 0) {
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+    return sentences.slice(0, 3).map(s => s.trim());
+  }
+
+  return insights;
 }
 
 /**
- * Generate a simulated AI response
+ * Extract recommendations from the response text
  */
-function generateSimulatedResponse(message: string, keywords: string[]): any {
-  // Check if the message contains data analysis keywords
-  const containsDataAnalysis = /data|analy[sz]e|trend|pattern|statistic|insight/i.test(message);
+function extractRecommendations(text: string): string[] {
+  const recommendations = [];
 
-  // Check if the message contains customer-related keywords
-  const containsCustomer = /customer|client|user|buyer|consumer/i.test(message);
+  // Look for patterns like "Recommendation:" or "Suggest:" or bullet points after "recommend"
+  const lines = text.split('\n');
+  let inRecommendationSection = false;
 
-  // Check if the message contains service order keywords
-  const containsServiceOrders = /service|order|ticket|maintenance|repair|installation/i.test(message);
+  for (const line of lines) {
+    const trimmedLine = line.trim();
 
-  // Check if the message contains time-related keywords
-  const containsTimeAnalysis = /time|period|duration|month|week|day|year|quarter/i.test(message);
+    if (trimmedLine.match(/^(recommendation|suggest|advise|propose):/i) ||
+        trimmedLine.match(/recommendations:/i)) {
+      inRecommendationSection = true;
 
-  // Generate a response based on the detected topics
-  if (containsDataAnalysis && containsCustomer) {
-    return {
-      insights: [
-        "Wykryto wzrost liczby nowych klientów o 23% w ostatnim kwartale",
-        "Średni czas utrzymania klienta wzrósł z 1.8 do 2.3 lat",
-        "Klienci z sektora komercyjnego generują 3.5x więcej przychodów niż klienci indywidualni"
-      ],
-      recommendations: [
-        "Zwiększ nakłady na marketing w sektorze komercyjnym",
-        "Wprowadź program lojalnościowy dla klientów indywidualnych",
-        "Skontaktuj się z klientami nieaktywnymi od ponad 6 miesięcy"
-      ],
-      metrics: {
-        customerGrowth: 0.23,
-        averageLifetime: 2.3,
-        commercialToIndividualRatio: 3.5
+      // Extract the recommendation from this line if it contains one
+      const match = trimmedLine.match(/^(?:recommendation|suggest|advise|propose):(.*)/i);
+      if (match && match[1].trim()) {
+        recommendations.push(match[1].trim());
       }
-    };
-  } else if (containsDataAnalysis && containsServiceOrders) {
-    return {
-      insights: [
-        "Średni czas realizacji zlecenia wynosi 3.2 dnia",
-        "Zlecenia serwisowe klimatyzacji stanowią 68% wszystkich zleceń w okresie letnim",
-        "Wykryto 15% wzrost awaryjnych zleceń serwisowych w ostatnim miesiącu"
-      ],
-      recommendations: [
-        "Zwiększ liczbę techników dostępnych w okresie letnim",
-        "Wprowadź priorytetyzację zleceń awaryjnych",
-        "Zaproponuj klientom z częstymi awariami umowy serwisowe"
-      ],
-      metrics: {
-        averageCompletionTime: 3.2,
-        acServicePercentage: 0.68,
-        emergencyOrdersIncrease: 0.15
+      continue;
+    }
+
+    if (inRecommendationSection &&
+        (trimmedLine.match(/^[•\-\*]\s+/) || trimmedLine.match(/^\d+\.\s+/))) {
+      // Clean up the line
+      const cleanLine = trimmedLine
+        .replace(/^[•\-\*]\s+/, '')
+        .replace(/^\d+\.\s+/, '')
+        .trim();
+
+      if (cleanLine) {
+        recommendations.push(cleanLine);
       }
-    };
-  } else if (containsTimeAnalysis) {
-    return {
-      timeTrends: [
-        { period: "Styczeń", value: 42 },
-        { period: "Luty", value: 47 },
-        { period: "Marzec", value: 53 },
-        { period: "Kwiecień", value: 58 },
-        { period: "Maj", value: 69 },
-        { period: "Czerwiec", value: 84 }
-      ],
-      seasonalPatterns: {
-        summer: "Wysoki popyt na serwis klimatyzacji",
-        winter: "Wysoki popyt na serwis ogrzewania",
-        spring: "Umiarkowany popyt na instalacje nowych systemów",
-        fall: "Niski popyt ogólny, dobry czas na kampanie marketingowe"
-      },
-      forecast: {
-        nextMonth: "Przewidywany wzrost o 12%",
-        nextQuarter: "Przewidywany wzrost o 8%",
-        nextYear: "Przewidywany wzrost o 15%"
-      }
-    };
-  } else {
-    // Generic response using the extracted keywords
-    return {
-      summary: `Analiza danych wykazała istotne wzorce związane z następującymi aspektami: ${keywords.join(', ')}`,
-      keyInsights: [
-        `Wykryto znaczący trend wzrostowy w obszarze ${keywords[0] || 'biznesowym'}`,
-        `Analiza wskazuje na potencjalne możliwości optymalizacji w zakresie ${keywords[1] || 'operacyjnym'}`,
-        `Zidentyfikowano obszary wymagające uwagi: ${keywords[2] || 'obsługa klienta'}, ${keywords[3] || 'efektywność'}`
-      ],
-      recommendations: [
-        "Monitoruj kluczowe wskaźniki wydajności w czasie rzeczywistym",
-        "Rozważ automatyzację powtarzalnych procesów",
-        "Zbieraj więcej danych w celu dokładniejszej analizy"
-      ]
-    };
+    }
+
+    // End of recommendation section
+    if (inRecommendationSection && trimmedLine === '') {
+      inRecommendationSection = false;
+    }
   }
+
+  // If no explicit recommendations, look for sentences with recommendation keywords
+  if (recommendations.length === 0) {
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+    for (const sentence of sentences) {
+      if (sentence.match(/\b(recommend|suggest|advise|should|could|consider|try|implement)\b/i)) {
+        recommendations.push(sentence.trim());
+      }
+    }
+  }
+
+  return recommendations;
 }
 
 /**

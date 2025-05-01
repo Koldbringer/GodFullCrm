@@ -1,10 +1,14 @@
-import { createClient } from '@/lib/supabase/server'
+import { createRouteClient } from '@/lib/supabase/route'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
+    const supabase = await createRouteClient()
+
+    if (!supabase) {
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 })
+    }
 
     // Get the referrer to redirect back after sign out
     const referrer = request.headers.get('referer') || '/'
