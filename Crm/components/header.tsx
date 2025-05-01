@@ -3,15 +3,15 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Bell, Search as SearchIcon, X } from "lucide-react"
+import { Search as SearchIcon, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { UserNav } from "@/components/user-nav"
 import { DarkModeToggle } from "@/components/ui/dark-mode-toggle"
-import { Badge } from "@/components/ui/badge"
 import { Breadcrumbs } from "@/components/breadcrumbs"
+import { AutomationNotifications } from "@/components/automation/automation-notifications"
 
 interface HeaderProps {
   className?: string
@@ -85,25 +85,8 @@ export function Header({ className }: HeaderProps) {
           </Button>
         )}
 
-        {/* Notifications */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
-          aria-label="Powiadomienia"
-          asChild
-        >
-          <Link href="/notifications">
-            <Bell className="h-5 w-5" />
-            <Badge
-              variant="destructive"
-              className="absolute -right-1 -top-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-            >
-              3
-            </Badge>
-            <span className="sr-only">Powiadomienia</span>
-          </Link>
-        </Button>
+        {/* Automation Notifications */}
+        <AutomationNotifications />
 
         {/* Dark mode toggle */}
         <DarkModeToggle />

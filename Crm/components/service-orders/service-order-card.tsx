@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { MoreHorizontal, Loader2, Calendar } from "lucide-react";
+import { MoreHorizontal, Loader2, Calendar, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import Link from "next/link";
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Database } from "@/types/supabase";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Typ dla zlecenia serwisowego (powtórzony dla niezależności komponentu, można zrefaktoryzować)
 type ServiceOrder = Database['public']['Tables']['service_orders']['Row'] & {
@@ -92,6 +93,7 @@ interface ServiceOrderCardProps {
 
 export function ServiceOrderCard({ order, updatingOrderId }: ServiceOrderCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     const element = cardRef.current;
@@ -104,16 +106,63 @@ export function ServiceOrderCard({ order, updatingOrderId }: ServiceOrderCardPro
         currentStatus: order.status,
         type: 'service-order',
       }),
+      onDragStart: () => {
+        setIsDragging(true);
+      },
+      onDrop: () => {
+        setIsDragging(false);
+      },
+      onDragCancel: () => {
+        setIsDragging(false);
+      }
     });
   }, [order.id, order.status]); // Include order.status in dependencies
 
+  // Get status icon for the tooltip
+  const getStatusIcon = () => {
+    switch (order.status) {
+      case "new":
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      case "in_progress":
+        return <Clock className="h-4 w-4 text-blue-500" />;
+      case "scheduled":
+        return <Calendar className="h-4 w-4 text-purple-500" />;
+      case "completed":
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case "cancelled":
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <Card ref={cardRef} className={`mb-3 ${updatingOrderId === order.id ? 'opacity-50' : ''} relative`}>
+    <Card
+      ref={cardRef}
+      className={`mb-3 ${updatingOrderId === order.id ? 'opacity-50' : ''} ${isDragging ? 'opacity-70 shadow-lg border-primary' : ''} relative transition-all duration-200 cursor-grab active:cursor-grabbing`}
+    >
       <CardContent className="p-3">
         <div className="flex justify-between items-start mb-2">
-          <Badge className={getPriorityColor(order.priority)} variant="outline">
-            {getPriorityText(order.priority)}
-          </Badge>
+          <div className="flex items-center gap-1">
+            <Badge className={getPriorityColor(order.priority)} variant="outline">
+              {getPriorityText(order.priority)}
+            </Badge>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="ml-1">
+                    {getStatusIcon()}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Status: {order.status === "in_progress" ? "W trakcie" :
+                              order.status === "completed" ? "Zakończone" :
+                              order.status === "scheduled" ? "Zaplanowane" :
+                              order.status === "cancelled" ? "Anulowane" : "Nowe"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">

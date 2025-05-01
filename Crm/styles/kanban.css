@@ -1,5 +1,5 @@
 .draggable-item {
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
   position: relative;
   z-index: 1;
 }
@@ -7,9 +7,59 @@
 .draggable-item.is-dragging {
   opacity: 0.8;
   z-index: 10;
+  transform: scale(1.02);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-/* Styles for react-beautiful-dnd */
+/* Kanban column styles */
+.kanban-column {
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.kanban-column.drag-over {
+  background-color: rgba(var(--primary-rgb), 0.1);
+  border: 2px dashed rgba(var(--primary-rgb), 0.5);
+}
+
+/* Card styles */
+.kanban-card {
+  transition: all 0.2s ease;
+  cursor: grab;
+}
+
+.kanban-card:active {
+  cursor: grabbing;
+}
+
+.kanban-card.is-dragging {
+  opacity: 0.7;
+  transform: rotate(1deg) scale(1.02);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Drop indicator */
+.drop-indicator {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background-color: rgba(var(--primary-rgb), 0.05);
+  border-radius: 0.5rem;
+  z-index: 5;
+}
+
+.drop-indicator-text {
+  background-color: rgba(var(--primary-rgb), 0.1);
+  color: rgb(var(--primary-rgb));
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+/* Styles for react-beautiful-dnd (legacy) */
 .react-beautiful-dnd-draggable {
   /* This will be applied via className */
   transition: transform 0.2s;

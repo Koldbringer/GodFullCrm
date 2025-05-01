@@ -32,6 +32,8 @@ import { CreateTaskNode } from "./nodes/CreateTaskNode"; // Import CreateTaskNod
 import { UpdateContractNode } from "./nodes/UpdateContractNode"; // Import UpdateContractNode
 import { TimeConditionNode } from "./nodes/TimeConditionNode"; // Import TimeConditionNode
 import { DataConditionNode } from "./nodes/DataConditionNode"; // Import DataConditionNode
+import { AiAnalysisNode } from "./nodes/AiAnalysisNode"; // Import AiAnalysisNode
+import { DynamicLinkNode } from "./nodes/DynamicLinkNode"; // Import DynamicLinkNode
 
 
 type Schemes = GetSchemes<
@@ -90,6 +92,8 @@ async function createEditor(container: HTMLElement) {
   editor.addFactory(UpdateContractNode); // Rejestracja UpdateContractNode
   editor.addFactory(TimeConditionNode); // Rejestracja TimeConditionNode
   editor.addFactory(DataConditionNode); // Rejestracja DataConditionNode
+  editor.addFactory(AiAnalysisNode); // Rejestracja AiAnalysisNode
+  editor.addFactory(DynamicLinkNode); // Rejestracja DynamicLinkNode
 
 
   // Przykładowe węzły - zostaną zastąpione niestandardowymi węzłami automatyzacji

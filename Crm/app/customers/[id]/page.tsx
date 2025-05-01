@@ -7,10 +7,12 @@ import {
   Building2,
   Calendar,
   Clock,
+  FileAudio,
   FileText,
   Globe,
   Mail,
   MapPin,
+  Mic,
   Package,
   Phone,
   User,
@@ -37,8 +39,10 @@ import { CustomerAnalytics } from "@/components/customers/customer-analytics"
 import { CustomerNotes } from "@/components/customers/customer-notes"
 import { CustomerSites } from "@/components/customers/customer-sites"
 import { CustomerFiles } from "@/components/customers/customer-files"
+import { CustomerTranscriptions } from "@/components/customers/customer-transcriptions"
+import { CustomerAudioManager } from "@/components/customers/customer-audio-manager"
 import { NotificationCenter } from "@/components/notifications/notification-center"
-import { createServerClient } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
 import { EditCustomerForm } from "@/components/customers/edit-customer-form"
 
 export const metadata: Metadata = {
@@ -437,11 +441,13 @@ export default async function CustomerDetailsPage({ params }: { params: { id: st
         </div>
 
         <Tabs defaultValue="devices" className="space-y-4">
-          <TabsList className="grid grid-cols-8 md:w-auto w-full">
+          <TabsList className="grid grid-cols-11 md:w-auto w-full">
             <TabsTrigger value="devices">Urządzenia</TabsTrigger>
             <TabsTrigger value="sites">Lokalizacje</TabsTrigger>
             <TabsTrigger value="service">Historia serwisowa</TabsTrigger>
             <TabsTrigger value="communication">Komunikacja</TabsTrigger>
+            <TabsTrigger value="transcriptions">Transkrypcje</TabsTrigger>
+            <TabsTrigger value="audio">Nagrania</TabsTrigger>
             <TabsTrigger value="invoices">Faktury</TabsTrigger>
             <TabsTrigger value="analytics">Analityka</TabsTrigger>
             <TabsTrigger value="notes">Notatki</TabsTrigger>
@@ -492,6 +498,28 @@ export default async function CustomerDetailsPage({ params }: { params: { id: st
               </Button>
             </div>
             <CustomerCommunication customerId={customer.id} />
+          </TabsContent>
+
+          <TabsContent value="transcriptions" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium">Transkrypcje rozmów</h3>
+              <Button>
+                <Mic className="mr-2 h-4 w-4" />
+                Dodaj transkrypcję
+              </Button>
+            </div>
+            <CustomerTranscriptions customerId={customer.id} />
+          </TabsContent>
+
+          <TabsContent value="audio" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium">Nagrania rozmów</h3>
+              <Button>
+                <FileAudio className="mr-2 h-4 w-4" />
+                Dodaj nagranie
+              </Button>
+            </div>
+            <CustomerAudioManager customerId={customer.id} />
           </TabsContent>
 
           <TabsContent value="invoices" className="space-y-4">

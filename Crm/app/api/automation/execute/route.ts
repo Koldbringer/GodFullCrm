@@ -5,6 +5,7 @@ import { sendEmail } from '@/lib/email'; // Import funkcji wysyłki emaila
 import { createTask } from '@/lib/tasks'; // Import funkcji tworzenia zadania
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'; // Import Supabase client
 import { cookies } from 'next/headers'; // Import cookies
+import { createDynamicLink } from '@/lib/services/dynamic-links'; // Import funkcji tworzenia dynamicznych linków
 // Import funkcji aktualizacji kontraktu (do zaimplementowania)
 // import { updateContract } from '@/lib/contracts';
 
@@ -123,6 +124,50 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
 
+    } else if (nodeId === 'DynamicLinkNode') { // Obsługa węzła Generator Linków Dynamicznych
+      const {
+        linkType,
+        title,
+        description,
+        expiresInDays,
+        passwordProtected,
+        password,
+        resourceId
+      } = nodeData;
+
+      if (!linkType || !title) {
+        return NextResponse.json({ error: 'Missing required link data: linkType and title are required' }, { status: 400 });
+      }
+
+      try {
+        // Utworzenie dynamicznego linku
+        const { url, token } = await createDynamicLink({
+          linkType,
+          resourceId,
+          title,
+          description,
+          expiresInDays: expiresInDays || 14,
+          password: passwordProtected ? password : undefined,
+          metadata: {
+            createdBy: 'automation',
+            nodeId,
+          },
+        });
+
+        // Pełny URL z domeną
+        const fullUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}${url}`;
+
+        return NextResponse.json({
+          success: true,
+          message: 'Dynamic link created successfully',
+          token,
+          url,
+          fullUrl,
+        });
+      } catch (error: any) {
+        console.error('Error creating dynamic link:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
     } else {
       return NextResponse.json({ error: `Unknown node type: ${nodeId}` }, { status: 400 });
     }

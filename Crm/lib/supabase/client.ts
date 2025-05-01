@@ -1,30 +1,34 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '../../types/supabase'
-
-const DISABLE_AUTH = process.env.NEXT_PUBLIC_DISABLE_SUPABASE_AUTH === 'true'
+import { SUPABASE_CONFIG } from './config'
 
 export const createClient = () => {
-  if (DISABLE_AUTH) return null
+  if (SUPABASE_CONFIG.disableAuth) {
+    console.log('Auth is disabled via environment variable, not creating client')
+    return null
+  }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!supabaseUrl || !supabaseKey) {
+  if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey) {
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('Missing Supabase environment variables')
+      throw new Error('Missing Supabase configuration')
     }
     console.warn('Supabase client created without credentials - auth disabled')
     return null
   }
 
-  return createBrowserClient<Database>({
-    supabaseUrl,
-    supabaseKey,
-    cookieOptions: {
-      name: 'sb-auth',
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/'
-    }
-  })
+  try {
+    console.log(`Creating browser client with cookie name: ${SUPABASE_CONFIG.cookieName}`)
+
+    return createBrowserClient<Database>({
+      supabaseUrl: SUPABASE_CONFIG.url,
+      supabaseKey: SUPABASE_CONFIG.anonKey,
+      cookieOptions: {
+        name: SUPABASE_CONFIG.cookieName,
+        ...SUPABASE_CONFIG.cookieOptions
+      }
+    })
+  } catch (error) {
+    console.error('Error creating Supabase browser client:', error)
+    return null
+  }
 }

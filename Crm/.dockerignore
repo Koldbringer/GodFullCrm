@@ -1,12 +1,67 @@
+# Dependencies
 node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Next.js build output
 .next
-.git
-.env*.local
+out
+
+# Environment variables
 .env
-.DS_Store
-*.md
-*.log
-dist
-coverage
-.vscode
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+# Keep .env.production for build args
+# .env.production
+
+# Version control
+.git
+.github
+.gitignore
+
+# IDE and editor files
 .idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test and documentation
+__tests__
+coverage
+*.test.js
+*.spec.js
+*.test.ts
+*.spec.ts
+docs
+*.md
+!README.md
+!DEPLOYMENT.md
+
+# Build tools
+.eslintrc
+.prettierrc
+.babelrc
+jest.config.js
+tsconfig.tsbuildinfo
+
+# Misc
+.storybook
+storybook-static
+.husky
+.editorconfig
+.npmrc
+.nvmrc
+.dockerignore
+Dockerfile
+docker-compose.yaml
+scripts

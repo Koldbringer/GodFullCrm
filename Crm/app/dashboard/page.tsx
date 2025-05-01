@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { ArrowUpRight, BarChart3, ClipboardList, Package, Users, Plus, Filter } from "lucide-react"
+import { Suspense } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,10 +14,328 @@ import { TechnicianPerformance } from "@/components/dashboard/technician-perform
 import { BusinessMetrics } from "@/components/dashboard/business-metrics"
 import { UpcomingTasks } from "@/components/dashboard/upcoming-tasks"
 import { AutomationStatusPanel } from "@/components/dashboard/automation-status-panel"
+import { Skeleton } from "@/components/ui/skeleton"
+import { createServerClient } from "@/lib/supabase/server"
+import Link from "next/link"
 
 export const metadata: Metadata = {
   title: "Dashboard - HVAC CRM ERP",
   description: "Zaawansowany dashboard dla systemu HVAC CRM ERP",
+}
+
+// Komponent dla karty z danymi i skeletonem podczas ładowania
+function MetricCard({
+  title,
+  icon,
+  value,
+  change,
+  isPositiveChange = true,
+  isLoading = false,
+  changeText
+}: {
+  title: string;
+  icon: React.ReactNode;
+  value: string | number;
+  change?: string | number;
+  isPositiveChange?: boolean;
+  isLoading?: boolean;
+  changeText?: string;
+}) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <>
+            <Skeleton className="h-8 w-24 mb-1" />
+            <Skeleton className="h-4 w-32" />
+          </>
+        ) : (
+          <>
+            <div className="text-2xl font-bold">{value}</div>
+            {change && (
+              <div className={`flex items-center text-xs ${isPositiveChange ? 'text-green-500' : 'text-red-500'}`}>
+                {isPositiveChange ? (
+                  <ArrowUpRight className="mr-1 h-4 w-4" />
+                ) : (
+                  <ArrowUpRight className="mr-1 h-4 w-4 transform rotate-90" />
+                )}
+                <span>{changeText || `${change} w tym miesiącu`}</span>
+              </div>
+            )}
+            {!change && (
+              <p className="text-xs text-muted-foreground">Brak danych porównawczych</p>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Komponent do pobierania danych o aktywnych zleceniach
+async function ActiveOrdersMetric() {
+  try {
+    const supabase = createServerClient();
+    if (!supabase) {
+      return <MetricCard
+        title="Aktywne zlecenia"
+        icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
+        value="N/A"
+        isLoading={false}
+      />;
+    }
+
+    // Pobierz aktywne zlecenia (status != 'completed' i != 'cancelled')
+    const { data: activeOrders, error: activeOrdersError } = await supabase
+      .from('service_orders')
+      .select('id, created_at')
+      .not('status', 'in', '("completed","cancelled")')
+
+    // Pobierz zlecenia utworzone w ciągu ostatnich 24 godzin
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const { data: newOrders, error: newOrdersError } = await supabase
+      .from('service_orders')
+      .select('id')
+      .gt('created_at', yesterday.toISOString())
+      .not('status', 'in', '("completed","cancelled")')
+
+    if (activeOrdersError) {
+      console.error('Error fetching active orders:', activeOrdersError);
+      return <MetricCard
+        title="Aktywne zlecenia"
+        icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
+        value="Błąd"
+        isLoading={false}
+      />;
+    }
+
+    return (
+      <MetricCard
+        title="Aktywne zlecenia"
+        icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
+        value={activeOrders?.length || 0}
+        change={newOrders?.length || 0}
+        isPositiveChange={true}
+        changeText={`+${newOrders?.length || 0} od wczoraj`}
+      />
+    );
+  } catch (error) {
+    console.error('Error in ActiveOrdersMetric:', error);
+    return <MetricCard
+      title="Aktywne zlecenia"
+      icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
+      value="Błąd"
+      isLoading={false}
+    />;
+  }
+}
+
+// Komponent do pobierania danych o klientach
+async function CustomersMetric() {
+  try {
+    const supabase = createServerClient();
+    if (!supabase) {
+      return <MetricCard
+        title="Klienci"
+        icon={<Users className="h-4 w-4 text-muted-foreground" />}
+        value="N/A"
+        isLoading={false}
+      />;
+    }
+
+    // Pobierz wszystkich klientów
+    const { data: customers, error: customersError } = await supabase
+      .from('customers')
+      .select('id, created_at')
+
+    // Pobierz klientów utworzonych w tym miesiącu
+    const firstDayOfMonth = new Date();
+    firstDayOfMonth.setDate(1);
+    firstDayOfMonth.setHours(0, 0, 0, 0);
+
+    const { data: newCustomers, error: newCustomersError } = await supabase
+      .from('customers')
+      .select('id')
+      .gt('created_at', firstDayOfMonth.toISOString())
+
+    if (customersError) {
+      console.error('Error fetching customers:', customersError);
+      return <MetricCard
+        title="Klienci"
+        icon={<Users className="h-4 w-4 text-muted-foreground" />}
+        value="Błąd"
+        isLoading={false}
+      />;
+    }
+
+    return (
+      <MetricCard
+        title="Klienci"
+        icon={<Users className="h-4 w-4 text-muted-foreground" />}
+        value={customers?.length || 0}
+        change={newCustomers?.length || 0}
+        isPositiveChange={true}
+        changeText={`+${newCustomers?.length || 0} w tym miesiącu`}
+      />
+    );
+  } catch (error) {
+    console.error('Error in CustomersMetric:', error);
+    return <MetricCard
+      title="Klienci"
+      icon={<Users className="h-4 w-4 text-muted-foreground" />}
+      value="Błąd"
+      isLoading={false}
+    />;
+  }
+}
+
+// Komponent do pobierania danych o urządzeniach
+async function DevicesMetric() {
+  try {
+    const supabase = createServerClient();
+    if (!supabase) {
+      return <MetricCard
+        title="Urządzenia"
+        icon={<Package className="h-4 w-4 text-muted-foreground" />}
+        value="N/A"
+        isLoading={false}
+      />;
+    }
+
+    // Pobierz wszystkie urządzenia
+    const { data: devices, error: devicesError } = await supabase
+      .from('devices')
+      .select('id, created_at')
+
+    // Pobierz urządzenia utworzone w tym miesiącu
+    const firstDayOfMonth = new Date();
+    firstDayOfMonth.setDate(1);
+    firstDayOfMonth.setHours(0, 0, 0, 0);
+
+    const { data: newDevices, error: newDevicesError } = await supabase
+      .from('devices')
+      .select('id')
+      .gt('created_at', firstDayOfMonth.toISOString())
+
+    if (devicesError) {
+      console.error('Error fetching devices:', devicesError);
+      return <MetricCard
+        title="Urządzenia"
+        icon={<Package className="h-4 w-4 text-muted-foreground" />}
+        value="Błąd"
+        isLoading={false}
+      />;
+    }
+
+    return (
+      <MetricCard
+        title="Urządzenia"
+        icon={<Package className="h-4 w-4 text-muted-foreground" />}
+        value={devices?.length || 0}
+        change={newDevices?.length || 0}
+        isPositiveChange={true}
+        changeText={`+${newDevices?.length || 0} w tym miesiącu`}
+      />
+    );
+  } catch (error) {
+    console.error('Error in DevicesMetric:', error);
+    return <MetricCard
+      title="Urządzenia"
+      icon={<Package className="h-4 w-4 text-muted-foreground" />}
+      value="Błąd"
+      isLoading={false}
+    />;
+  }
+}
+
+// Komponent do pobierania danych o przychodach
+async function RevenueMetric() {
+  try {
+    const supabase = createServerClient();
+    if (!supabase) {
+      return <MetricCard
+        title="Przychód"
+        icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
+        value="N/A"
+        isLoading={false}
+      />;
+    }
+
+    // Pobierz wszystkie zlecenia z kosztem
+    const { data: orders, error: ordersError } = await supabase
+      .from('service_orders')
+      .select('cost')
+      .not('cost', 'is', null)
+
+    // Pobierz zlecenia z poprzedniego miesiąca
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const firstDayLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+    const lastDayLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+
+    const { data: lastMonthOrders, error: lastMonthOrdersError } = await supabase
+      .from('service_orders')
+      .select('cost')
+      .not('cost', 'is', null)
+      .gte('created_at', firstDayLastMonth.toISOString())
+      .lte('created_at', lastDayLastMonth.toISOString())
+
+    if (ordersError) {
+      console.error('Error fetching revenue data:', ordersError);
+      return <MetricCard
+        title="Przychód"
+        icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
+        value="Błąd"
+        isLoading={false}
+      />;
+    }
+
+    // Oblicz całkowity przychód
+    const totalRevenue = orders?.reduce((sum, order) => sum + (order.cost || 0), 0) || 0;
+    const lastMonthRevenue = lastMonthOrders?.reduce((sum, order) => sum + (order.cost || 0), 0) || 0;
+
+    // Oblicz procentową zmianę
+    let percentChange = 0;
+    let isPositiveChange = true;
+
+    if (lastMonthRevenue > 0) {
+      percentChange = ((totalRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+      isPositiveChange = percentChange >= 0;
+      percentChange = Math.abs(percentChange);
+    }
+
+    // Formatuj przychód jako walutę
+    const formattedRevenue = new Intl.NumberFormat('pl-PL', {
+      style: 'currency',
+      currency: 'PLN',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(totalRevenue);
+
+    return (
+      <MetricCard
+        title="Przychód"
+        icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
+        value={formattedRevenue}
+        change={percentChange.toFixed(1)}
+        isPositiveChange={isPositiveChange}
+        changeText={`${isPositiveChange ? '+' : '-'}${percentChange.toFixed(1)}% niż w zeszłym miesiącu`}
+      />
+    );
+  } catch (error) {
+    console.error('Error in RevenueMetric:', error);
+    return <MetricCard
+      title="Przychód"
+      icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
+      value="Błąd"
+      isLoading={false}
+    />;
+  }
 }
 
 export default function DashboardPage() {
@@ -40,58 +359,32 @@ export default function DashboardPage() {
               <Filter className="mr-2 h-4 w-4" />
               Filtry
             </Button>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Nowe zlecenie
+            <Button asChild>
+              <Link href="/service-orders/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Nowe zlecenie
+              </Link>
             </Button>
           </div>
         </div>
 
         {/* Kluczowe wskaźniki */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Aktywne zlecenia</CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">24</div>
-              <p className="text-xs text-muted-foreground">+2 od wczoraj</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Klienci</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">145</div>
-              <p className="text-xs text-muted-foreground">+4 w tym miesiącu</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Urządzenia</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">312</div>
-              <p className="text-xs text-muted-foreground">+8 w tym miesiącu</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Przychód</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">128,500 zł</div>
-              <div className="flex items-center text-xs text-green-500">
-                <ArrowUpRight className="mr-1 h-4 w-4" />
-                <span>12.5% więcej niż w zeszłym miesiącu</span>
-              </div>
-            </CardContent>
-          </Card>
+          <Suspense fallback={<MetricCard title="Aktywne zlecenia" icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />} value="" isLoading={true} />}>
+            <ActiveOrdersMetric />
+          </Suspense>
+
+          <Suspense fallback={<MetricCard title="Klienci" icon={<Users className="h-4 w-4 text-muted-foreground" />} value="" isLoading={true} />}>
+            <CustomersMetric />
+          </Suspense>
+
+          <Suspense fallback={<MetricCard title="Urządzenia" icon={<Package className="h-4 w-4 text-muted-foreground" />} value="" isLoading={true} />}>
+            <DevicesMetric />
+          </Suspense>
+
+          <Suspense fallback={<MetricCard title="Przychód" icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />} value="" isLoading={true} />}>
+            <RevenueMetric />
+          </Suspense>
         </div>
 
         {/* Główne panele */}

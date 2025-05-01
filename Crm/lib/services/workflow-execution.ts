@@ -1,5 +1,6 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { createAutomationNotification } from './automation-notifications';
 
 // Types for workflow execution
 export interface WorkflowNode {
@@ -75,18 +76,18 @@ export function registerNodeHandler(nodeType: string, handler: NodeHandler) {
  */
 export async function getWorkflow(workflowId: string): Promise<Workflow | null> {
   const supabase = createRouteHandlerClient({ cookies });
-  
+
   const { data, error } = await supabase
     .from('automation_workflows')
     .select('*')
     .eq('id', workflowId)
     .single();
-  
+
   if (error || !data) {
     console.error('Error fetching workflow:', error);
     return null;
   }
-  
+
   // Parse the graph_json field which contains the workflow definition
   try {
     const workflow: Workflow = {
@@ -98,7 +99,7 @@ export async function getWorkflow(workflowId: string): Promise<Workflow | null> 
       is_active: data.is_active,
       ...JSON.parse(data.graph_json)
     };
-    
+
     return workflow;
   } catch (e) {
     console.error('Error parsing workflow JSON:', e);
@@ -110,13 +111,13 @@ export async function getWorkflow(workflowId: string): Promise<Workflow | null> 
  * Execute a workflow by ID
  */
 export async function executeWorkflow(
-  workflowId: string, 
+  workflowId: string,
   initialVariables: Record<string, any> = {}
 ): Promise<WorkflowExecutionResult> {
   const supabase = createRouteHandlerClient({ cookies });
   const startTime = new Date();
   const executionId = generateExecutionId();
-  
+
   // Create execution context
   const context: WorkflowExecutionContext = {
     workflowId,
@@ -126,32 +127,41 @@ export async function executeWorkflow(
     variables: { ...initialVariables },
     supabase
   };
-  
+
   try {
     // Get the workflow
     const workflow = await getWorkflow(workflowId);
     if (!workflow) {
       throw new Error(`Workflow with ID ${workflowId} not found`);
     }
-    
+
     // Log the execution start
     await logExecution(context, 'started', null);
-    
+
     // Find start nodes (nodes with no incoming connections)
     const startNodes = findStartNodes(workflow);
     if (startNodes.length === 0) {
       throw new Error('No start nodes found in workflow');
     }
-    
+
     // Execute the workflow starting from each start node
     for (const startNode of startNodes) {
       await executeNode(startNode, workflow, context);
     }
-    
+
     // Log the execution completion
     const endTime = new Date();
     await logExecution(context, 'completed', null, endTime);
-    
+
+    // Create a success notification
+    await createAutomationNotification(
+      workflowId,
+      workflow.name,
+      executionId,
+      `Przepływ "${workflow.name}" został wykonany pomyślnie`,
+      'success'
+    );
+
     return {
       success: true,
       executionId,
@@ -165,7 +175,27 @@ export async function executeWorkflow(
     const endTime = new Date();
     const errorMessage = error instanceof Error ? error.message : String(error);
     await logExecution(context, 'failed', errorMessage, endTime);
-    
+
+    // Get the workflow name
+    let workflowName = 'Unknown Workflow';
+    try {
+      const workflow = await getWorkflow(workflowId);
+      if (workflow) {
+        workflowName = workflow.name;
+      }
+    } catch (e) {
+      console.error('Error getting workflow name for notification:', e);
+    }
+
+    // Create an error notification
+    await createAutomationNotification(
+      workflowId,
+      workflowName,
+      executionId,
+      `Błąd wykonania przepływu "${workflowName}": ${errorMessage}`,
+      'error'
+    );
+
     return {
       success: false,
       executionId,
@@ -182,46 +212,46 @@ export async function executeWorkflow(
  * Execute a single node in the workflow
  */
 async function executeNode(
-  node: WorkflowNode, 
-  workflow: Workflow, 
+  node: WorkflowNode,
+  workflow: Workflow,
   context: WorkflowExecutionContext
 ): Promise<any> {
   // Check if node has already been executed in this context
   if (context.nodeResults[node.id]) {
     return context.nodeResults[node.id];
   }
-  
+
   try {
     // Log node execution start
     await logNodeExecution(context, node.id, 'started', null);
-    
+
     // Get the handler for this node type
     const handler = nodeHandlers[node.type];
     if (!handler) {
       throw new Error(`No handler registered for node type: ${node.type}`);
     }
-    
+
     // Execute the node
     const result = await handler.execute(node, context);
-    
+
     // Store the result in the context
     context.nodeResults[node.id] = result;
-    
+
     // Log node execution completion
     await logNodeExecution(context, node.id, 'completed', null);
-    
+
     // Find and execute next nodes
     const nextNodes = findNextNodes(node, workflow);
     for (const nextNode of nextNodes) {
       await executeNode(nextNode, workflow, context);
     }
-    
+
     return result;
   } catch (error) {
     // Log node execution error
     const errorMessage = error instanceof Error ? error.message : String(error);
     await logNodeExecution(context, node.id, 'failed', errorMessage);
-    
+
     // Rethrow the error to be caught by the workflow executor
     throw error;
   }
@@ -234,7 +264,7 @@ function findStartNodes(workflow: Workflow): WorkflowNode[] {
   const nodesWithIncomingConnections = new Set(
     workflow.connections.map(conn => conn.target)
   );
-  
+
   return workflow.nodes.filter(node => !nodesWithIncomingConnections.has(node.id));
 }
 
@@ -243,7 +273,7 @@ function findStartNodes(workflow: Workflow): WorkflowNode[] {
  */
 function findNextNodes(node: WorkflowNode, workflow: Workflow): WorkflowNode[] {
   const outgoingConnections = workflow.connections.filter(conn => conn.source === node.id);
-  
+
   return outgoingConnections.map(conn => {
     return workflow.nodes.find(n => n.id === conn.target)!;
   }).filter(Boolean);

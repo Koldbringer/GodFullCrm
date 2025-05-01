@@ -119,7 +119,11 @@ export function KanbanColumn({ status, orders, loading, updatingOrderId, handleD
   };
 
   return (
-    <div className={`space-y-2 ${isDraggedOver ? 'bg-blue-100' : ''}`} key={status} ref={columnRef}>
+    <div
+      className={`space-y-2 transition-all duration-200`}
+      key={status}
+      ref={columnRef}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {getStatusIcon(status)}
@@ -127,7 +131,13 @@ export function KanbanColumn({ status, orders, loading, updatingOrderId, handleD
         </div>
         <Badge variant="outline">{orders.length}</Badge>
       </div>
-      <div className="bg-muted/50 p-2 rounded-md min-h-[500px] relative">
+      <div
+        className={`p-2 rounded-md min-h-[500px] relative transition-colors duration-200 ${
+          isDraggedOver
+            ? 'bg-primary/10 border-2 border-dashed border-primary/50'
+            : 'bg-muted/50 border-2 border-transparent'
+        }`}
+      >
         {loading ? (
            Array.from({ length: 3 }).map((_, j) => (
              <Skeleton key={j} className="h-32 w-full mb-3" />
@@ -135,11 +145,23 @@ export function KanbanColumn({ status, orders, loading, updatingOrderId, handleD
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-20 text-center text-muted-foreground">
             <p className="text-sm">Brak zleceń</p>
+            {isDraggedOver && (
+              <p className="text-xs mt-2 text-primary">Upuść tutaj, aby zmienić status</p>
+            )}
           </div>
         ) : (
-          orders.map((order) => (
-            <ServiceOrderCard order={order} key={order.id} updatingOrderId={updatingOrderId} />
-          ))
+          <>
+            {orders.map((order) => (
+              <ServiceOrderCard order={order} key={order.id} updatingOrderId={updatingOrderId} />
+            ))}
+            {isDraggedOver && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="bg-primary/10 rounded-md p-2 text-primary text-sm font-medium">
+                  Upuść tutaj, aby zmienić status na {getStatusTitle(status)}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

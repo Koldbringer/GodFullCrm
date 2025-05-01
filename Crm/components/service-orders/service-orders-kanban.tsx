@@ -302,14 +302,91 @@ export function ServiceOrdersKanban() {
   }, [filteredOrders])
 
 
+  // Filter options for priority
+  const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
+  const [technicianFilter, setTechnicianFilter] = useState<string | null>(null);
+
+  // Filter orders by priority and search query
+  const getFilteredOrdersByStatus = () => {
+    let filtered = filteredOrders;
+
+    if (priorityFilter) {
+      filtered = filtered.filter(order => order.priority === priorityFilter);
+    }
+
+    if (technicianFilter) {
+      filtered = filtered.filter(order => order.technician_id === technicianFilter);
+    }
+
+    return {
+      new: filtered.filter((o) => statusMapping[o.status] === "new"),
+      "in-progress": filtered.filter((o) => statusMapping[o.status] === "in-progress"),
+      scheduled: filtered.filter((o) => statusMapping[o.status] === "scheduled"),
+      completed: filtered.filter((o) => statusMapping[o.status] === "completed"),
+      cancelled: filtered.filter((o) => statusMapping[o.status] === "cancelled"),
+    };
+  };
+
+  const filteredOrdersByStatus = getFilteredOrdersByStatus();
+
   return (
     <div className="space-y-4">
-      <div className="flex w-full max-w-sm items-center space-x-2">
-        <Input
-          placeholder="Szukaj zlecenia..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+        <div className="flex w-full max-w-sm items-center space-x-2">
+          <Input
+            placeholder="Szukaj zlecenia..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="priority-filter" className="text-xs text-muted-foreground">Priorytet</label>
+            <select
+              id="priority-filter"
+              aria-label="Filtruj według priorytetu"
+              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+              value={priorityFilter || ''}
+              onChange={(e) => setPriorityFilter(e.target.value || null)}
+            >
+              <option value="">Wszystkie priorytety</option>
+              <option value="high">Wysoki</option>
+              <option value="medium">Średni</option>
+              <option value="low">Niski</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label htmlFor="technician-filter" className="text-xs text-muted-foreground">Technik</label>
+            <select
+              id="technician-filter"
+              aria-label="Filtruj według technika"
+              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+              value={technicianFilter || ''}
+              onChange={(e) => setTechnicianFilter(e.target.value || null)}
+            >
+              <option value="">Wszyscy technicy</option>
+              {/* Dynamically generate options from available technicians */}
+              {Array.from(new Set(serviceOrders.map(order => order.technician_id))).filter(Boolean).map(techId => {
+                const tech = serviceOrders.find(order => order.technician_id === techId)?.technicians;
+                return tech ? (
+                  <option key={techId} value={techId}>{tech.name}</option>
+                ) : null;
+              })}
+          </select>
+
+          <Button
+            variant="outline"
+            onClick={() => {
+              setPriorityFilter(null);
+              setTechnicianFilter(null);
+              setSearchQuery('');
+            }}
+          >
+            Wyczyść filtry
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -329,8 +406,8 @@ export function ServiceOrdersKanban() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {Object.entries(ordersByStatus).map(([status, orders]) => (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto">
+          {Object.entries(filteredOrdersByStatus).map(([status, orders]) => (
             <KanbanColumn
               key={status}
               status={status}

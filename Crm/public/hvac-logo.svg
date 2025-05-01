@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="#0284c7" />
+  
+  <!-- HVAC Icon Elements -->
+  <g fill="#ffffff">
+    <!-- Snowflake (Cooling) -->
+    <path d="M256 120 L256 200 M226 150 L286 170 M226 170 L286 150" stroke="#ffffff" stroke-width="16" stroke-linecap="round"/>
+    <path d="M256 312 L256 392 M226 342 L286 362 M226 362 L286 342" stroke="#ffffff" stroke-width="16" stroke-linecap="round"/>
+    
+    <!-- Flame (Heating) -->
+    <path d="M180 256 C180 226 200 206 220 196 C210 226 230 246 230 256 C230 276 210 296 180 296 C160 286 180 266 180 256Z" fill="#ffffff"/>
+    
+    <!-- Air Flow (Ventilation) -->
+    <path d="M300 236 C340 236 360 246 380 256 M300 276 C340 276 360 266 380 256" stroke="#ffffff" stroke-width="16" stroke-linecap="round"/>
+    
+    <!-- Air Conditioning (Circular Element) -->
+    <circle cx="256" cy="256" r="60" stroke="#ffffff" stroke-width="16" fill="none"/>
+  </g>
+</svg>

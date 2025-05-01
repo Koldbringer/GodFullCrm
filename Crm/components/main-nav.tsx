@@ -138,6 +138,15 @@ export function MainNav({ className, ...props }: React.HTMLAttributes<HTMLElemen
       >
         Raporty
       </Link>
+      <Link
+        href="/automation/dashboard"
+        className={cn(
+          "text-sm font-medium transition-colors hover:text-primary",
+          pathname?.startsWith("/automation") ? "text-primary" : "text-muted-foreground",
+        )}
+      >
+        Automatyzacja
+      </Link>
     </nav>
   )
 }
