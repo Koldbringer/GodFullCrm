@@ -54,7 +54,7 @@ export function TriggerPanel({
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedTrigger, setSelectedTrigger] = useState<Trigger | null>(null);
-  const [triggerType, setTriggerType] = useState<'schedule' | 'event' | 'webhook'>('schedule');
+  const [triggerType, setTriggerType] = useState<'schedule' | 'event' | 'webhook' | 'mcp'>('schedule');
   
   // Form state for schedule trigger
   const [scheduleName, setScheduleName] = useState('');
@@ -249,7 +249,7 @@ export function TriggerPanel({
           </DialogHeader>
           
           <Tabs value={triggerType} onValueChange={(value) => setTriggerType(value as any)}>
-            <TabsList className="grid grid-cols-3">
+            <TabsList className="grid grid-cols-4">
               <TabsTrigger value="schedule" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 Schedule
@@ -261,6 +261,10 @@ export function TriggerPanel({
               <TabsTrigger value="webhook" className="flex items-center gap-2">
                 <Globe className="h-4 w-4" />
                 Webhook
+              </TabsTrigger>
+              <TabsTrigger value="mcp" className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Zdarzenie MCP
               </TabsTrigger>
             </TabsList>
             

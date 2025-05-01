@@ -76,7 +76,7 @@ async function createEditor(container: HTMLElement) {
   editor.use(controlflow); // Podłączenie silnika przepływu sterowania
 
   // Rejestracja niestandardowych węzłów
-  // Commenting out addFactory calls as they seem incorrect for this Rete.js version
+  editor.addFactory(MCPCommandNode);
   // editor.addFactory(EmailNode);
   // editor.addFactory(CreateTaskNode); // Rejestracja CreateTaskNode
   // editor.addFactory(UpdateContractNode); // Rejestracja UpdateContractNode

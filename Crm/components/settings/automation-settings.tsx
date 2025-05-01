@@ -17,7 +17,7 @@ export function AutomationSettings() {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="workflows" className="flex items-center gap-2">
             <Bot className="h-4 w-4" />
             Automatyzacje
@@ -29,6 +29,10 @@ export function AutomationSettings() {
           <TabsTrigger value="channels" className="flex items-center gap-2">
             <Send className="h-4 w-4" />
             Kanały powiadomień
+          </TabsTrigger>
+          <TabsTrigger value="mcp" className="flex items-center gap-2">
+            <Send className="h-4 w-4" />
+            Połączenia MCP
           </TabsTrigger>
         </TabsList>
 
@@ -42,6 +46,39 @@ export function AutomationSettings() {
 
         <TabsContent value="channels" className="space-y-4">
           <NotificationChannelSettings />
+        </TabsContent>
+
+        <TabsContent value="mcp" className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium">Konfiguracja MCP</h3>
+              <Button variant="outline" onClick={() => {}}>
+                Nowe połączenie
+              </Button>
+            </div>
+            <Separator />
+            
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Localhost</CardTitle>
+                  <CardDescription>Połączenie lokalne</CardDescription>
+                </CardHeader>
+                <CardContent className="pb-2">
+                  <div className="text-sm text-muted-foreground">
+                    Host: 127.0.0.1:8080
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    Status: <span className="text-green-500">Aktywne</span>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                  <Button variant="outline" size="sm">Edytuj</Button>
+                  <Button variant="destructive" size="sm">Usuń</Button>
+                </CardFooter>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
