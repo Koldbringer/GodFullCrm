@@ -129,45 +129,54 @@ export function MapViewClientClustered({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
       <div className="md:col-span-2">
         <div className="mb-4">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Szukaj po nazwie, adresie lub dzielnicy..."
-                className="pl-8"
+                className="pl-8 w-full"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
-            <Button onClick={handleSearch}>Szukaj</Button>
-            {searchQuery && (
-              <Button variant="outline" onClick={clearSearch}>Wyczyść</Button>
-            )}
+            <div className="flex gap-2">
+              <Button onClick={handleSearch} className="flex-shrink-0 animate-fade">
+                <Search className="h-4 w-4 mr-2" />
+                Szukaj
+              </Button>
+              {searchQuery && (
+                <Button variant="outline" onClick={clearSearch} className="flex-shrink-0 animate-fade">
+                  Wyczyść
+                </Button>
+              )}
+            </div>
           </div>
           {searchQuery && (
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-2 animate-fade">
               Znaleziono {filteredLocations.length} lokalizacji
             </p>
           )}
         </div>
 
-        <ClusteredMap
-          locations={filteredLocations}
-          onMarkerClick={handleMarkerClick}
-          selectedLocation={selectedLocation?.id}
-          title={title}
-          description={description}
-          mapType={mapType}
-          onMapTypeChange={setMapType}
-        />
+        <div className="rounded-lg overflow-hidden shadow-sm">
+          <ClusteredMap
+            locations={filteredLocations}
+            onMarkerClick={handleMarkerClick}
+            selectedLocation={selectedLocation?.id}
+            title={title}
+            description={description}
+            mapType={mapType}
+            onMapTypeChange={setMapType}
+          />
+        </div>
       </div>
 
-      <div>
+      <div className="space-y-6">
         {selectedLocation ? (
           <Card>
             <CardHeader className="pb-2">
@@ -266,44 +275,44 @@ export function MapViewClientClustered({
           </Card>
         )}
 
-        <div className="mt-4 grid grid-cols-4 gap-4">
-          <Card className="col-span-1">
+        <div className="grid grid-cols-4 gap-4">
+          <Card className="col-span-1 hover-lift">
             <CardContent className="p-4 text-center">
-              <User className="h-8 w-8 mx-auto text-blue-500" />
-              <div className="mt-2 text-2xl font-bold">
+              <User className="h-8 w-8 mx-auto text-blue-500 mb-2" />
+              <div className="text-2xl font-bold">
                 {filteredLocations.filter(loc => loc.type === "customer").length}
               </div>
-              <div className="text-xs text-muted-foreground">Klienci</div>
+              <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Klienci</div>
             </CardContent>
           </Card>
 
-          <Card className="col-span-1">
+          <Card className="col-span-1 hover-lift">
             <CardContent className="p-4 text-center">
-              <Building2 className="h-8 w-8 mx-auto text-purple-500" />
-              <div className="mt-2 text-2xl font-bold">
+              <Building2 className="h-8 w-8 mx-auto text-purple-500 mb-2" />
+              <div className="text-2xl font-bold">
                 {filteredLocations.filter(loc => loc.type === "site").length}
               </div>
-              <div className="text-xs text-muted-foreground">Lokalizacje</div>
+              <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Lokalizacje</div>
             </CardContent>
           </Card>
 
-          <Card className="col-span-1">
+          <Card className="col-span-1 hover-lift">
             <CardContent className="p-4 text-center">
-              <Wrench className="h-8 w-8 mx-auto text-orange-500" />
-              <div className="mt-2 text-2xl font-bold">
+              <Wrench className="h-8 w-8 mx-auto text-orange-500 mb-2" />
+              <div className="text-2xl font-bold">
                 {filteredLocations.filter(loc => loc.type === "service").length}
               </div>
-              <div className="text-xs text-muted-foreground">Zlecenia</div>
+              <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Zlecenia</div>
             </CardContent>
           </Card>
 
-          <Card className="col-span-1">
+          <Card className="col-span-1 hover-lift">
             <CardContent className="p-4 text-center">
-              <User className="h-8 w-8 mx-auto text-cyan-500" />
-              <div className="mt-2 text-2xl font-bold">
+              <User className="h-8 w-8 mx-auto text-cyan-500 mb-2" />
+              <div className="text-2xl font-bold">
                 {filteredLocations.filter(loc => loc.type === "technician").length}
               </div>
-              <div className="text-xs text-muted-foreground">Technicy</div>
+              <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Technicy</div>
             </CardContent>
           </Card>
         </div>
@@ -332,9 +341,9 @@ export function MapViewClientClustered({
                   <div key={district} className="flex items-center justify-between">
                     <div className="text-sm">{district}</div>
                     <div className="flex items-center">
-                      <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-blue-500"
+                          className="h-full bg-primary transition-all duration-500"
                           style={{
                             width: `${Math.min(100, (count / filteredLocations.length) * 100)}%`
                           }}

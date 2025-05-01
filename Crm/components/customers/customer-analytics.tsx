@@ -103,7 +103,7 @@ export function CustomerAnalytics({ customerId }: CustomerAnalyticsProps) {
                   <span className="font-medium">780.5 zł</span>
                 </div>
                 <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="bg-blue-500 h-full rounded-full" style={{ width: "30%" }}></div>
+                  <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: "30%" }}></div>
                 </div>
 
                 <div className="flex justify-between items-center">
@@ -111,7 +111,7 @@ export function CustomerAnalytics({ customerId }: CustomerAnalyticsProps) {
                   <span className="font-medium">701.1 zł</span>
                 </div>
                 <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="bg-red-500 h-full rounded-full" style={{ width: "27%" }}></div>
+                  <div className="bg-red-500 h-full rounded-full transition-all duration-500" style={{ width: "27%" }}></div>
                 </div>
 
                 <div className="flex justify-between items-center">
@@ -119,7 +119,7 @@ export function CustomerAnalytics({ customerId }: CustomerAnalyticsProps) {
                   <span className="font-medium">1476 zł</span>
                 </div>
                 <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="bg-green-500 h-full rounded-full" style={{ width: "57%" }}></div>
+                  <div className="bg-green-500 h-full rounded-full transition-all duration-500" style={{ width: "57%" }}></div>
                 </div>
               </div>
             </CardContent>
@@ -225,7 +225,7 @@ export function CustomerAnalytics({ customerId }: CustomerAnalyticsProps) {
                         <div
                           className={`w-full h-10 rounded-sm ${
                             month.amount > 0 ? "bg-primary" : "bg-muted"
-                          } flex items-end`}
+                          } flex items-end transition-all duration-300 hover:opacity-80`}
                           style={{
                             opacity: month.amount > 0 ? 1 : 0.3,
                           }}
@@ -364,33 +364,33 @@ export function CustomerAnalytics({ customerId }: CustomerAnalyticsProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="space-y-2">
+                <div className="space-y-2 p-2 rounded-md hover:bg-muted/30 transition-colors">
                   <div className="flex justify-between items-center">
-                    <span>Klimatyzator 1</span>
+                    <span className="font-medium">Klimatyzator 1</span>
                     <span className="text-green-600 font-medium">Dobry</span>
                   </div>
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="bg-green-500 h-full rounded-full" style={{ width: "95%" }}></div>
+                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden shadow-sm">
+                    <div className="bg-green-500 h-full rounded-full transition-all duration-500" style={{ width: "95%" }}></div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 p-2 rounded-md hover:bg-muted/30 transition-colors">
                   <div className="flex justify-between items-center">
-                    <span>Klimatyzator 2</span>
+                    <span className="font-medium">Klimatyzator 2</span>
                     <span className="text-green-600 font-medium">Dobry</span>
                   </div>
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="bg-green-500 h-full rounded-full" style={{ width: "92%" }}></div>
+                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden shadow-sm">
+                    <div className="bg-green-500 h-full rounded-full transition-all duration-500" style={{ width: "92%" }}></div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 p-2 rounded-md hover:bg-muted/30 transition-colors">
                   <div className="flex justify-between items-center">
-                    <span>Rekuperator</span>
+                    <span className="font-medium">Rekuperator</span>
                     <span className="text-yellow-600 font-medium">Wymaga naprawy</span>
                   </div>
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="bg-yellow-500 h-full rounded-full" style={{ width: "78%" }}></div>
+                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden shadow-sm">
+                    <div className="bg-yellow-500 h-full rounded-full transition-all duration-500" style={{ width: "78%" }}></div>
                   </div>
                 </div>
               </div>
@@ -405,20 +405,20 @@ export function CustomerAnalytics({ customerId }: CustomerAnalyticsProps) {
             <CardContent>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Łączne zużycie</p>
+                  <div className="space-y-2 p-2 rounded-md hover:bg-muted/30 transition-colors">
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide">Łączne zużycie</p>
                     <p className="text-2xl font-bold">350 kWh</p>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Średnie zużycie</p>
+                  <div className="space-y-2 p-2 rounded-md hover:bg-muted/30 transition-colors">
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide">Średnie zużycie</p>
                     <p className="text-2xl font-bold">116.7 kWh</p>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Trend</p>
+                  <div className="space-y-2 p-2 rounded-md hover:bg-muted/30 transition-colors">
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide">Trend</p>
                     <p className="text-2xl font-bold text-green-600">↓ 10%</p>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Efektywność</p>
+                  <div className="space-y-2 p-2 rounded-md hover:bg-muted/30 transition-colors">
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide">Efektywność</p>
                     <p className="text-2xl font-bold">88%</p>
                   </div>
                 </div>

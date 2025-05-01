@@ -44,7 +44,15 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createClient(cookies());
+    const supabase = await createClient();
+
+    if (!supabase) {
+      return NextResponse.json(
+        { message: "Database connection failed" },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const customerId = searchParams.get("customer_id");
 

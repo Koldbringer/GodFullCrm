@@ -1,9 +1,13 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createRouteClient } from '@/lib/supabase/route';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createRouteClient();
+
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -33,7 +37,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createRouteClient();
+
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+  }
+
   const settings = await request.json();
 
   const { data, error } = await supabase
@@ -49,7 +58,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   const { id, ...settings } = await request.json();
 
   if (!id) {
@@ -70,7 +79,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 

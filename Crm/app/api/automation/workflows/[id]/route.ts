@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createRouteClient } from '@/lib/supabase/route'
 import { NextResponse } from 'next/server'
 
 export async function GET(
@@ -7,7 +6,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const id = params.id
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabase = await createRouteClient()
+
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 })
+  }
 
   const { data, error } = await supabase
     .from('automation_workflows')

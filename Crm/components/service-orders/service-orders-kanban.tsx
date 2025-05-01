@@ -160,29 +160,23 @@ export function ServiceOrdersKanban() {
       return;
     }
 
-    // Optimistically update the state
-    // Safely access status, provide a default if null/undefined
-    const currentStatus = statusMapping[orderToMove.status ?? ''] || 'unknown';
-    const sourceCol = Array.from(ordersByStatus[currentStatus] || []);
-    const destCol = Array.from(ordersByStatus[newStatus] || []);
+    // Get the original status before updating
+    const originalStatus = orderToMove.status;
 
-
-    const [movedOrder] = sourceCol.filter(order => order.id === orderId);
-    const sourceColFiltered = sourceCol.filter(order => order.id !== orderId);
-
-    if (movedOrder) { // Ensure movedOrder is found before updating status
-      movedOrder.status = reverseStatusMapping[newStatus]; // Update status on the moved order object
-      destCol.push(movedOrder); // Add to the new column
-    }
-
-
-    setOrdersByStatus({
-      ...ordersByStatus,
-      [currentStatus]: sourceColFiltered,
-      [newStatus]: destCol,
+    // Optimistically update the order in the serviceOrders array
+    const updatedServiceOrders = serviceOrders.map(order => {
+      if (order.id === orderId) {
+        return {
+          ...order,
+          status: reverseStatusMapping[newStatus]
+        };
+      }
+      return order;
     });
 
-    // TODO: Implement database update
+    // Update the state with the modified orders
+    setServiceOrders(updatedServiceOrders);
+
     console.log(`Optimistically updated order ${orderId} status to ${newStatus}`);
 
     try {
@@ -198,15 +192,18 @@ export function ServiceOrdersKanban() {
       toast.error("Błąd podczas aktualizacji statusu zlecenia");
 
       // Revert the state if the database update fails
-      // Safely access status, provide a default if null/undefined
-      const revertedCurrentStatus = statusMapping[orderToMove.status ?? ''] || 'unknown';
-       if (movedOrder) { // Ensure movedOrder exists before attempting to revert
-         setOrdersByStatus({
-           ...ordersByStatus,
-           [newStatus]: destCol.filter(order => order.id !== orderId), // Remove from new column
-           [revertedCurrentStatus]: [...sourceColFiltered, movedOrder], // Add back to original column
-         });
-       }
+      const revertedServiceOrders = serviceOrders.map(order => {
+        if (order.id === orderId) {
+          return {
+            ...order,
+            status: originalStatus
+          };
+        }
+        return order;
+      });
+
+      // Restore the original state
+      setServiceOrders(revertedServiceOrders);
     } finally {
       setUpdatingOrder(null);
     }
@@ -216,13 +213,8 @@ export function ServiceOrdersKanban() {
   const [loading, setLoading] = useState(true)
   const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [ordersByStatus, setOrdersByStatus] = useState<Record<string, ServiceOrder[]>>(() => ({
-    new: [],
-    "in-progress": [],
-    scheduled: [],
-    completed: [],
-    cancelled: []
-  }))
+  // We'll use getFilteredOrdersByStatus() directly instead of maintaining this state
+  // to avoid potential infinite loops
 
   // Pobieranie danych z API
   useEffect(() => {
@@ -290,23 +282,25 @@ export function ServiceOrdersKanban() {
       order.id.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // Aktualizuj kolumny po filtrowaniu zleceń
-  useEffect(() => {
-    setOrdersByStatus({
-      new: filteredOrders.filter((o) => statusMapping[o.status] === "new"),
-      "in-progress": filteredOrders.filter((o) => statusMapping[o.status] === "in-progress"),
-      scheduled: filteredOrders.filter((o) => statusMapping[o.status] === "scheduled"),
-      completed: filteredOrders.filter((o) => statusMapping[o.status] === "completed"),
-      cancelled: filteredOrders.filter((o) => statusMapping[o.status] === "cancelled"),
-    })
-  }, [filteredOrders])
+  // We'll use getFilteredOrdersByStatus instead of this useEffect
+  // to avoid potential infinite loops
 
 
-  // Filter options for priority
+  // Filter options for priority, technician, and service type
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [technicianFilter, setTechnicianFilter] = useState<string | null>(null);
+  const [serviceTypeTab, setServiceTypeTab] = useState<string>("all"); // "all", "service", "installation", "inspection"
 
-  // Filter orders by priority and search query
+  // Service type mapping for better display
+  const serviceTypeMapping: Record<string, string> = {
+    "all": "Wszystkie",
+    "service": "Serwisowe",
+    "maintenance": "Przeglądy",
+    "installation": "Montażowe",
+    "inspection": "Oględziny"
+  };
+
+  // Filter orders by priority, technician, and service type
   const getFilteredOrdersByStatus = () => {
     let filtered = filteredOrders;
 
@@ -316,6 +310,11 @@ export function ServiceOrdersKanban() {
 
     if (technicianFilter) {
       filtered = filtered.filter(order => order.technician_id === technicianFilter);
+    }
+
+    // Filter by service type if not "all"
+    if (serviceTypeTab !== "all") {
+      filtered = filtered.filter(order => order.service_type === serviceTypeTab);
     }
 
     return {
@@ -331,6 +330,42 @@ export function ServiceOrdersKanban() {
 
   return (
     <div className="space-y-4">
+      {/* Tabs for different service types */}
+      <Tabs defaultValue="all" value={serviceTypeTab} onValueChange={setServiceTypeTab} className="w-full">
+        <TabsList className="grid grid-cols-5 mb-4">
+          <TabsTrigger value="all">
+            Wszystkie
+            <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+              {filteredOrders.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="service">
+            Serwisowe
+            <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+              {filteredOrders.filter(o => o.service_type === 'service').length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="maintenance">
+            Przeglądy
+            <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+              {filteredOrders.filter(o => o.service_type === 'maintenance').length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="installation">
+            Montażowe
+            <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+              {filteredOrders.filter(o => o.service_type === 'installation').length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="inspection">
+            Oględziny
+            <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+              {filteredOrders.filter(o => o.service_type === 'inspection').length}
+            </span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
         <div className="flex w-full max-w-sm items-center space-x-2">
           <Input
@@ -374,7 +409,8 @@ export function ServiceOrdersKanban() {
                   <option key={techId} value={techId}>{tech.name}</option>
                 ) : null;
               })}
-          </select>
+            </select>
+          </div>
 
           <Button
             variant="outline"
@@ -382,11 +418,23 @@ export function ServiceOrdersKanban() {
               setPriorityFilter(null);
               setTechnicianFilter(null);
               setSearchQuery('');
+              setServiceTypeTab("all");
             }}
           >
             Wyczyść filtry
           </Button>
         </div>
+      </div>
+
+      {/* Display current service type as title */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold tracking-tight">
+          Zlecenia {serviceTypeTab !== 'all' ? serviceTypeMapping[serviceTypeTab] : ''}
+        </h2>
+        <Button variant="outline" size="sm">
+          <Plus className="mr-2 h-4 w-4" />
+          Nowe zlecenie
+        </Button>
       </div>
 
       {loading ? (

@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase"
+import { createServerClient } from "@/lib/supabase/server"
 import { TicketsList } from "@/components/tickets/tickets-list"
 import { TicketsStats } from "@/components/tickets/tickets-stats"
 import { TicketsKanban } from "@/components/tickets/tickets-kanban"
@@ -83,9 +83,9 @@ export async function TicketsServer() {
   try {
     // Pobieranie danych bezpośrednio z Supabase w komponencie serwerowym
     const supabase = await createServerClient()
-    
+
     console.log("Pobieranie zgłoszeń z Supabase")
-    
+
     const { data: tickets, error } = await supabase
       .from('tickets')
       .select(`
@@ -96,7 +96,7 @@ export async function TicketsServer() {
         technician:technician_id(id, name)
       `)
       .order('created_at', { ascending: false })
-    
+
     if (error) {
       console.error("Error fetching tickets:", error)
       return {
@@ -105,12 +105,12 @@ export async function TicketsServer() {
         TicketsKanbanComponent: () => <TicketsKanban initialTickets={fallbackTicketsData} />
       }
     }
-    
+
     console.log(`Pobrano ${tickets.length} zgłoszeń`)
-    
+
     // Używamy danych z API lub danych zastępczych, jeśli API zwróci pusty wynik
     const ticketsData = tickets.length > 0 ? tickets : fallbackTicketsData
-    
+
     return {
       TicketsListComponent: () => <TicketsList initialTickets={ticketsData} />,
       TicketsStatsComponent: () => <TicketsStats initialTickets={ticketsData} />,

@@ -1,30 +1,29 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(request: Request) {
   try {
     const { message } = await request.json();
-    
+
     if (!message) {
       return NextResponse.json(
         { error: 'Message is required' },
         { status: 400 }
       );
     }
-    
+
     // In a production environment, you would call an actual AI service like OpenAI here
     // For now, we'll simulate an AI response
-    
+
     // Extract some keywords from the message to make the response seem more relevant
     const keywords = extractKeywords(message);
-    
+
     // Generate a simulated AI response
     const aiResponse = generateSimulatedResponse(message, keywords);
-    
+
     // Log the analysis request to the database
     await logAnalysisRequest(message, aiResponse);
-    
+
     return NextResponse.json({
       result: aiResponse,
       timestamp: new Date().toISOString(),
@@ -50,7 +49,7 @@ function extractKeywords(message: string): string[] {
     'shall', 'should', 'may', 'might', 'must', 'can', 'could', 'data', 'analyze',
     'following', 'instructions', 'according'
   ]);
-  
+
   return message
     .toLowerCase()
     .replace(/[^\w\s]/g, '')
@@ -65,16 +64,16 @@ function extractKeywords(message: string): string[] {
 function generateSimulatedResponse(message: string, keywords: string[]): any {
   // Check if the message contains data analysis keywords
   const containsDataAnalysis = /data|analy[sz]e|trend|pattern|statistic|insight/i.test(message);
-  
+
   // Check if the message contains customer-related keywords
   const containsCustomer = /customer|client|user|buyer|consumer/i.test(message);
-  
+
   // Check if the message contains service order keywords
   const containsServiceOrders = /service|order|ticket|maintenance|repair|installation/i.test(message);
-  
+
   // Check if the message contains time-related keywords
   const containsTimeAnalysis = /time|period|duration|month|week|day|year|quarter/i.test(message);
-  
+
   // Generate a response based on the detected topics
   if (containsDataAnalysis && containsCustomer) {
     return {
@@ -157,13 +156,13 @@ function generateSimulatedResponse(message: string, keywords: string[]): any {
  */
 async function logAnalysisRequest(message: string, response: any): Promise<void> {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    
+    const supabase = await createClient();
+
     await supabase.from('ai_analysis_logs').insert({
       prompt: message,
       response: JSON.stringify(response),
       created_at: new Date().toISOString()
-    });
+    }) as any;
   } catch (error) {
     console.error('Error logging AI analysis request:', error);
     // Don't throw - this is a non-critical operation

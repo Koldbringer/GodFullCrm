@@ -16,24 +16,19 @@ const statusMapping: Record<string, string> = {
   "cancelled": "cancelled"
 };
 
-// Typ dla zlecenia serwisowego (powtórzony dla niezależności komponentu, można zrefaktoryzować)
-type ServiceOrder = {
-  id: string;
+// Import the ServiceOrder type from the types file
+import { Database } from "@/types/supabase";
+
+// Typ dla zlecenia serwisowego
+type ServiceOrder = Database['public']['Tables']['service_orders']['Row'] & {
   title: string;
   description: string | null;
-  status: string;
   priority: string | null;
-  type: string | null;
-  created_at: string;
-  updated_at: string;
-  customer_id: string | null;
-  site_id: string | null;
-  device_id: string | null;
-  technician_id: string | null;
-  scheduled_date: string | null;
-  completed_date: string | null;
-  estimated_duration: number | null;
-  notes: string | null;
+  service_type: string | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  cost: number | null;
+  payment_status: string | null;
   customers?: {
     name: string;
   };

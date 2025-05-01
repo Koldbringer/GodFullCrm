@@ -1,39 +1,39 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
 } from '@/components/ui/card';
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
 } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
-import { 
-  AlertTriangle, 
-  BarChart3, 
-  Brain, 
-  Calendar, 
-  Clock, 
-  Download, 
-  Lightbulb, 
-  RefreshCw, 
-  Search, 
-  Sparkles, 
-  TrendingUp, 
-  Users, 
-  Zap 
+import {
+  AlertTriangle,
+  BarChart3,
+  Brain,
+  Calendar,
+  Clock,
+  Download,
+  Lightbulb,
+  RefreshCw,
+  Search,
+  Sparkles,
+  TrendingUp,
+  Users,
+  Zap
 } from 'lucide-react';
 
 type AiAnalysis = {
@@ -53,31 +53,31 @@ export function AiInsightsPanel() {
   const [customPrompt, setCustomPrompt] = useState('');
   const [customData, setCustomData] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
+
   useEffect(() => {
     fetchAnalyses();
   }, []);
-  
+
   const fetchAnalyses = async () => {
     setIsRefreshing(true);
-    
+
     try {
       const response = await fetch('/api/ai/analyze/logs?limit=20');
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch AI analyses');
       }
-      
+
       const data = await response.json();
-      
+
       // Parse the response JSON for each analysis
       const parsedAnalyses = data.map((analysis: any) => ({
         ...analysis,
-        response: typeof analysis.response === 'string' 
-          ? JSON.parse(analysis.response) 
+        response: typeof analysis.response === 'string'
+          ? JSON.parse(analysis.response)
           : analysis.response
       }));
-      
+
       setAnalyses(parsedAnalyses);
       setError(null);
     } catch (error) {
@@ -93,7 +93,7 @@ export function AiInsightsPanel() {
       setIsRefreshing(false);
     }
   };
-  
+
   const handleCustomAnalysis = async () => {
     if (!customPrompt.trim()) {
       toast({
@@ -103,9 +103,9 @@ export function AiInsightsPanel() {
       });
       return;
     }
-    
+
     setIsAnalyzing(true);
-    
+
     try {
       // Try to parse the custom data as JSON if provided
       let parsedData;
@@ -131,7 +131,7 @@ export function AiInsightsPanel() {
           ]
         };
       }
-      
+
       const response = await fetch('/api/ai/analyze', {
         method: 'POST',
         headers: {
@@ -142,13 +142,13 @@ export function AiInsightsPanel() {
           data: parsedData,
         }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to perform AI analysis');
       }
-      
+
       const result = await response.json();
-      
+
       // Add the new analysis to the list
       setAnalyses(prev => [{
         id: `temp-${Date.now()}`,
@@ -156,16 +156,16 @@ export function AiInsightsPanel() {
         response: result.result,
         created_at: new Date().toISOString(),
       }, ...prev]);
-      
+
       // Clear the form
       setCustomPrompt('');
       setCustomData('');
-      
+
       toast({
         title: 'Analysis Complete',
         description: 'AI analysis completed successfully',
       });
-      
+
       // Switch to the recent tab to show the new analysis
       setActiveTab('recent');
     } catch (error) {
@@ -179,20 +179,20 @@ export function AiInsightsPanel() {
       setIsAnalyzing(false);
     }
   };
-  
+
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleString();
   };
-  
+
   const renderAnalysisContent = (analysis: AiAnalysis) => {
     const response = analysis.response;
-    
+
     if (!response) {
       return <p className="text-muted-foreground">No data available</p>;
     }
-    
+
     // Check if response has insights
     if (response.insights) {
       return (
@@ -201,35 +201,35 @@ export function AiInsightsPanel() {
             <h4 className="text-sm font-medium mb-2">Insights</h4>
             <ul className="space-y-1">
               {response.insights.map((insight: string, index: number) => (
-                <li key={index} className="text-sm flex items-start gap-2">
+                <li key={index} className="text-sm flex items-start gap-2 hover:bg-muted/30 p-1 rounded-md transition-colors">
                   <Lightbulb className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                  <span>{insight}</span>
+                  <span className="flex-1">{insight}</span>
                 </li>
               ))}
             </ul>
           </div>
-          
+
           {response.recommendations && (
             <div>
               <h4 className="text-sm font-medium mb-2">Recommendations</h4>
               <ul className="space-y-1">
                 {response.recommendations.map((rec: string, index: number) => (
-                  <li key={index} className="text-sm flex items-start gap-2">
+                  <li key={index} className="text-sm flex items-start gap-2 hover:bg-muted/30 p-1 rounded-md transition-colors">
                     <Zap className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                    <span>{rec}</span>
+                    <span className="flex-1">{rec}</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
-          
+
           {response.metrics && (
             <div>
               <h4 className="text-sm font-medium mb-2">Key Metrics</h4>
               <div className="grid grid-cols-2 gap-2">
                 {Object.entries(response.metrics).map(([key, value]: [string, any]) => (
-                  <div key={key} className="bg-muted/50 p-2 rounded">
-                    <div className="text-xs text-muted-foreground">{key}</div>
+                  <div key={key} className="bg-muted/50 p-2 rounded hover:bg-muted/70 transition-colors shadow-sm">
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide">{key}</div>
                     <div className="font-medium">{typeof value === 'number' && value < 1 ? (value * 100).toFixed(1) + '%' : value}</div>
                   </div>
                 ))}
@@ -239,7 +239,7 @@ export function AiInsightsPanel() {
         </div>
       );
     }
-    
+
     // Check if response has time trends
     if (response.timeTrends) {
       return (
@@ -252,11 +252,11 @@ export function AiInsightsPanel() {
                 {response.timeTrends.map((point: any, index: number) => {
                   const maxValue = Math.max(...response.timeTrends.map((p: any) => p.value));
                   const height = (point.value / maxValue) * 100;
-                  
+
                   return (
                     <div key={index} className="flex flex-col items-center">
-                      <div 
-                        className="w-8 bg-primary/80 rounded-t"
+                      <div
+                        className="w-8 bg-primary/80 rounded-t transition-all duration-300 hover:bg-primary"
                         style={{ height: `${height}%` }}
                       ></div>
                       <div className="text-xs mt-1">{point.period}</div>
@@ -266,7 +266,7 @@ export function AiInsightsPanel() {
               </div>
             </div>
           </div>
-          
+
           {response.seasonalPatterns && (
             <div>
               <h4 className="text-sm font-medium mb-2">Seasonal Patterns</h4>
@@ -280,7 +280,7 @@ export function AiInsightsPanel() {
               </div>
             </div>
           )}
-          
+
           {response.forecast && (
             <div>
               <h4 className="text-sm font-medium mb-2">Forecast</h4>
@@ -297,7 +297,7 @@ export function AiInsightsPanel() {
         </div>
       );
     }
-    
+
     // Generic response format
     if (response.summary || response.keyInsights) {
       return (
@@ -308,29 +308,29 @@ export function AiInsightsPanel() {
               <p className="text-sm">{response.summary}</p>
             </div>
           )}
-          
+
           {response.keyInsights && (
             <div>
               <h4 className="text-sm font-medium mb-2">Key Insights</h4>
               <ul className="space-y-1">
                 {response.keyInsights.map((insight: string, index: number) => (
-                  <li key={index} className="text-sm flex items-start gap-2">
+                  <li key={index} className="text-sm flex items-start gap-2 hover:bg-muted/30 p-1 rounded-md transition-colors">
                     <Brain className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                    <span>{insight}</span>
+                    <span className="flex-1">{insight}</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
-          
+
           {response.recommendations && (
             <div>
               <h4 className="text-sm font-medium mb-2">Recommendations</h4>
               <ul className="space-y-1">
                 {response.recommendations.map((rec: string, index: number) => (
-                  <li key={index} className="text-sm flex items-start gap-2">
+                  <li key={index} className="text-sm flex items-start gap-2 hover:bg-muted/30 p-1 rounded-md transition-colors">
                     <Zap className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                    <span>{rec}</span>
+                    <span className="flex-1">{rec}</span>
                   </li>
                 ))}
               </ul>
@@ -339,7 +339,7 @@ export function AiInsightsPanel() {
         </div>
       );
     }
-    
+
     // Fallback for unknown response format
     return (
       <div>
@@ -350,42 +350,43 @@ export function AiInsightsPanel() {
       </div>
     );
   };
-  
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList>
-            <TabsTrigger value="recent" className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full overflow-x-auto">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="recent" className="flex items-center gap-2 whitespace-nowrap">
               <Clock className="h-4 w-4" />
               Recent Analyses
             </TabsTrigger>
-            <TabsTrigger value="custom" className="flex items-center gap-2">
+            <TabsTrigger value="custom" className="flex items-center gap-2 whitespace-nowrap">
               <Sparkles className="h-4 w-4" />
               Custom Analysis
             </TabsTrigger>
-            <TabsTrigger value="business" className="flex items-center gap-2">
+            <TabsTrigger value="business" className="flex items-center gap-2 whitespace-nowrap">
               <BarChart3 className="h-4 w-4" />
               Business Insights
             </TabsTrigger>
-            <TabsTrigger value="customer" className="flex items-center gap-2">
+            <TabsTrigger value="customer" className="flex items-center gap-2 whitespace-nowrap">
               <Users className="h-4 w-4" />
               Customer Insights
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
+
+        <Button
+          variant="outline"
+          size="sm"
           onClick={fetchAnalyses}
           disabled={isRefreshing}
+          className="ml-auto animate-fade"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
-      
+
       <TabsContent value="recent" className="mt-0 space-y-6">
         {isLoading ? (
           <div className="space-y-4">
@@ -411,7 +412,7 @@ export function AiInsightsPanel() {
           </Card>
         ) : (
           analyses.map(analysis => (
-            <Card key={analysis.id} className="overflow-hidden">
+            <Card key={analysis.id} className="overflow-hidden hover-lift">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <div>
@@ -423,7 +424,7 @@ export function AiInsightsPanel() {
                       {formatDate(analysis.created_at)}
                     </CardDescription>
                   </div>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" className="opacity-70 hover:opacity-100 transition-opacity">
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>
@@ -431,9 +432,9 @@ export function AiInsightsPanel() {
               <CardContent className="pb-3">
                 <div className="mb-4">
                   <h3 className="text-sm font-medium mb-1">Prompt</h3>
-                  <p className="text-sm text-muted-foreground">{analysis.prompt}</p>
+                  <p className="text-sm text-muted-foreground truncate-2">{analysis.prompt}</p>
                 </div>
-                
+
                 <div className="border-t pt-3">
                   {renderAnalysisContent(analysis)}
                 </div>
@@ -442,7 +443,7 @@ export function AiInsightsPanel() {
           ))
         )}
       </TabsContent>
-      
+
       <TabsContent value="custom" className="mt-0">
         <Card>
           <CardHeader>
@@ -461,7 +462,7 @@ export function AiInsightsPanel() {
                 className="min-h-[100px]"
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Data (Optional JSON)</label>
               <Textarea
@@ -476,7 +477,7 @@ export function AiInsightsPanel() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button 
+            <Button
               onClick={handleCustomAnalysis}
               disabled={isAnalyzing || !customPrompt.trim()}
               className="w-full"
@@ -496,7 +497,7 @@ export function AiInsightsPanel() {
           </CardFooter>
         </Card>
       </TabsContent>
-      
+
       <TabsContent value="business" className="mt-0">
         <Card>
           <CardHeader>
@@ -517,7 +518,7 @@ export function AiInsightsPanel() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-3">
                   <Calendar className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                   <div>
@@ -528,7 +529,7 @@ export function AiInsightsPanel() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
                   <Users className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
@@ -539,7 +540,7 @@ export function AiInsightsPanel() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-3">
                   <Brain className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                   <div>
@@ -551,7 +552,7 @@ export function AiInsightsPanel() {
                 </div>
               </div>
             </div>
-            
+
             <div className="pt-4 border-t">
               <h3 className="text-sm font-medium mb-3">Performance Metrics</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -560,19 +561,19 @@ export function AiInsightsPanel() {
                   <div className="text-lg font-bold">$1,250</div>
                   <div className="text-xs text-green-500">↑ 12%</div>
                 </div>
-                
+
                 <div className="bg-muted/50 p-3 rounded">
                   <div className="text-xs text-muted-foreground">Customer Retention</div>
                   <div className="text-lg font-bold">78%</div>
                   <div className="text-xs text-green-500">↑ 5%</div>
                 </div>
-                
+
                 <div className="bg-muted/50 p-3 rounded">
                   <div className="text-xs text-muted-foreground">Service Completion Rate</div>
                   <div className="text-lg font-bold">92%</div>
                   <div className="text-xs text-green-500">↑ 3%</div>
                 </div>
-                
+
                 <div className="bg-muted/50 p-3 rounded">
                   <div className="text-xs text-muted-foreground">Customer Satisfaction</div>
                   <div className="text-lg font-bold">4.7/5</div>
@@ -588,7 +589,7 @@ export function AiInsightsPanel() {
           </CardFooter>
         </Card>
       </TabsContent>
-      
+
       <TabsContent value="customer" className="mt-0">
         <Card>
           <CardHeader>
@@ -601,8 +602,8 @@ export function AiInsightsPanel() {
             <div className="flex justify-between items-center">
               <h3 className="text-sm font-medium">Customer Segments</h3>
               <div className="flex items-center gap-2">
-                <Input 
-                  placeholder="Search customers..." 
+                <Input
+                  placeholder="Search customers..."
                   className="w-60 h-8"
                 />
                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -610,7 +611,7 @@ export function AiInsightsPanel() {
                 </Button>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
                 <CardHeader className="pb-2">
@@ -634,7 +635,7 @@ export function AiInsightsPanel() {
                   </ul>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Commercial Clients</CardTitle>
@@ -657,7 +658,7 @@ export function AiInsightsPanel() {
                   </ul>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Industrial Clients</CardTitle>
@@ -681,10 +682,10 @@ export function AiInsightsPanel() {
                 </CardContent>
               </Card>
             </div>
-            
+
             <div className="pt-4 border-t">
               <h3 className="text-sm font-medium mb-3">Customer Behavior Insights</h3>
-              
+
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
                   <Lightbulb className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
@@ -695,7 +696,7 @@ export function AiInsightsPanel() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-3">
                   <Lightbulb className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
                   <div>
@@ -705,7 +706,7 @@ export function AiInsightsPanel() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-3">
                   <Lightbulb className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
                   <div>

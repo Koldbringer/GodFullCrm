@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 // API Route for managing module-specific settings
 
 export async function GET(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   const moduleName = searchParams.get('moduleName');
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       .from('module_settings')
       .select('*')
       .eq('id', id)
-      .single();
+      .single() as any;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       .from('module_settings')
       .select('*')
       .eq('module_name', moduleName)
-      .single();
+      .single() as any;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
   else {
     const { data, error } = await supabase
       .from('module_settings')
-      .select('*');
+      .select('*') as any;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -49,13 +49,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   const moduleSettings = await request.json();
 
   const { data, error } = await supabase
     .from('module_settings')
     .insert([moduleSettings])
-    .select();
+    .select() as any;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   const { id, ...moduleSettings } = await request.json();
 
   if (!id) {
@@ -76,7 +76,7 @@ export async function PUT(request: Request) {
     .from('module_settings')
     .update(moduleSettings)
     .eq('id', id)
-    .select();
+    .select() as any;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -86,7 +86,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -97,7 +97,7 @@ export async function DELETE(request: Request) {
   const { error } = await supabase
     .from('module_settings')
     .delete()
-    .eq('id', id);
+    .eq('id', id) as any;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

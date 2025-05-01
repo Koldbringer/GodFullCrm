@@ -12,6 +12,7 @@ import { UserNav } from "@/components/user-nav"
 import { DarkModeToggle } from "@/components/ui/dark-mode-toggle"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { AutomationNotifications } from "@/components/automation/automation-notifications"
+import { PWAInstallButton } from "@/components/pwa/pwa-install-button"
 
 interface HeaderProps {
   className?: string
@@ -87,6 +88,9 @@ export function Header({ className }: HeaderProps) {
 
         {/* Automation Notifications */}
         <AutomationNotifications />
+
+        {/* PWA Install Button */}
+        <PWAInstallButton />
 
         {/* Dark mode toggle */}
         <DarkModeToggle />

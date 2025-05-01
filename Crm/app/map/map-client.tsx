@@ -11,7 +11,6 @@ import {
   Building2,
   Wrench,
   Calendar,
-  Clock,
   Phone,
   Mail
 } from "lucide-react"
@@ -96,8 +95,8 @@ export function MapViewClient({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="md:col-span-2">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+      <div className="md:col-span-2 rounded-lg overflow-hidden shadow-sm">
         <MapView
           locations={filteredLocations}
           onMarkerClick={handleMarkerClick}
@@ -108,7 +107,7 @@ export function MapViewClient({
         />
       </div>
 
-      <div>
+      <div className="space-y-6">
         {selectedLocation ? (
           <Card>
             <CardHeader className="pb-2">
@@ -208,43 +207,43 @@ export function MapViewClient({
         )}
 
         <div className="mt-4 grid grid-cols-4 gap-4">
-          <Card className="col-span-1">
+          <Card className="col-span-1 hover-lift">
             <CardContent className="p-4 text-center">
-              <User className="h-8 w-8 mx-auto text-blue-500" />
-              <div className="mt-2 text-2xl font-bold">
+              <User className="h-8 w-8 mx-auto text-blue-500 mb-2" />
+              <div className="text-2xl font-bold">
                 {filteredLocations.filter(loc => loc.type === "customer").length}
               </div>
-              <div className="text-xs text-muted-foreground">Klienci</div>
+              <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Klienci</div>
             </CardContent>
           </Card>
 
-          <Card className="col-span-1">
+          <Card className="col-span-1 hover-lift">
             <CardContent className="p-4 text-center">
-              <Building2 className="h-8 w-8 mx-auto text-purple-500" />
-              <div className="mt-2 text-2xl font-bold">
+              <Building2 className="h-8 w-8 mx-auto text-purple-500 mb-2" />
+              <div className="text-2xl font-bold">
                 {filteredLocations.filter(loc => loc.type === "site").length}
               </div>
-              <div className="text-xs text-muted-foreground">Lokalizacje</div>
+              <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Lokalizacje</div>
             </CardContent>
           </Card>
 
-          <Card className="col-span-1">
+          <Card className="col-span-1 hover-lift">
             <CardContent className="p-4 text-center">
-              <Wrench className="h-8 w-8 mx-auto text-orange-500" />
-              <div className="mt-2 text-2xl font-bold">
+              <Wrench className="h-8 w-8 mx-auto text-orange-500 mb-2" />
+              <div className="text-2xl font-bold">
                 {filteredLocations.filter(loc => loc.type === "service").length}
               </div>
-              <div className="text-xs text-muted-foreground">Zlecenia</div>
+              <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Zlecenia</div>
             </CardContent>
           </Card>
 
-          <Card className="col-span-1">
+          <Card className="col-span-1 hover-lift">
             <CardContent className="p-4 text-center">
-              <User className="h-8 w-8 mx-auto text-cyan-500" />
-              <div className="mt-2 text-2xl font-bold">
+              <User className="h-8 w-8 mx-auto text-cyan-500 mb-2" />
+              <div className="text-2xl font-bold">
                 {filteredLocations.filter(loc => loc.type === "technician").length}
               </div>
-              <div className="text-xs text-muted-foreground">Technicy</div>
+              <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Technicy</div>
             </CardContent>
           </Card>
         </div>
@@ -273,9 +272,9 @@ export function MapViewClient({
                   <div key={district} className="flex items-center justify-between">
                     <div className="text-sm">{district}</div>
                     <div className="flex items-center">
-                      <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-blue-500"
+                          className="h-full bg-primary transition-all duration-500"
                           style={{
                             width: `${Math.min(100, (count / filteredLocations.length) * 100)}%`
                           }}

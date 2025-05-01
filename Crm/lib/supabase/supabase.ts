@@ -1,8 +1,4 @@
-import { createServerClient as create } from '@supabase/auth-helpers-nextjs/server'
-import { cookies } from 'next/headers'
-
-// This is a standard implementation based on common usage.
-// It assumes SUPABASE_URL and SUPABASE_ANON_KEY are in your environment variables.
+import { createBrowserClient } from '@supabase/ssr'
 export function createServerClient() {
   const cookieStore = cookies()
 

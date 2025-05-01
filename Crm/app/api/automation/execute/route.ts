@@ -1,5 +1,4 @@
-:start_line:1
--------
+
 import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email'; // Import funkcji wysyłki emaila
 import { createTask } from '@/lib/tasks'; // Import funkcji tworzenia zadania

@@ -1,11 +1,15 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { createRouteClient } from '@/lib/supabase/route';
 
 // API Route for managing automation and notification settings
 
 export async function GET(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createRouteClient();
+
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   const type = searchParams.get('type'); // 'automation', 'notifications', or 'channels'
@@ -24,7 +28,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from(tableName)
       .select('*')
-      .eq('id', id)
+      .eq('id', id as any)
       .single();
 
     if (error) {
@@ -70,7 +74,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createRouteClient();
+
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+  }
+
   const { type, ...settings } = await request.json(); // 'automation', 'notifications', or 'channels'
 
   if (!type) {
@@ -99,7 +108,12 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createRouteClient();
+
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+  }
+
   const { id, type, ...settings } = await request.json(); // 'automation', 'notifications', or 'channels'
 
   if (!id || !type) {
@@ -118,8 +132,8 @@ export async function PUT(request: Request) {
   const { data, error } = await supabase
     .from(tableName)
     .update(settings)
-    .eq('id', id)
-    .select();
+    .eq('id', id as any)
+    .select() as any;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -129,7 +143,12 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createRouteClient();
+
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   const type = searchParams.get('type'); // 'automation', 'notifications', or 'channels'
@@ -150,7 +169,7 @@ export async function DELETE(request: Request) {
   const { error } = await supabase
     .from(tableName)
     .delete()
-    .eq('id', id);
+    .eq('id', id as any);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

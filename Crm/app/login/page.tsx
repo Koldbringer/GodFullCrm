@@ -7,11 +7,12 @@ import Link from "next/link"
 import { useSearchParams } from 'next/navigation'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  // Pre-fill with test credentials for testing purposes
+  const [email, setEmail] = useState("test@test.pl")
+  const [password, setPassword] = useState("blaeritipol")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(true) // Show password by default for testing
   const [emailError, setEmailError] = useState("")
   const [passwordError, setPasswordError] = useState("")
   const [redirectTo, setRedirectTo] = useState("/")
@@ -87,6 +88,14 @@ export default function LoginPage() {
         // Clear form on successful signup
         setEmail('')
         setPassword('')
+      }
+      // Handle successful login
+      else if (action === 'login' && (result?.success || !result?.error)) {
+        setSuccessMessage('Login successful! Redirecting...')
+        // Redirect manually since server action redirect might not work in all cases
+        setTimeout(() => {
+          window.location.href = redirectTo || '/'
+        }, 1000)
       }
       // Login is handled by the server action redirect
     } catch (err: any) {

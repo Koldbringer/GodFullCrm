@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function login(formData: FormData) {
   try {
@@ -48,8 +48,19 @@ export async function login(formData: FormData) {
     // Revalidate all pages that might depend on auth state
     revalidatePath('/', 'layout')
 
-    // Redirect to the requested page or home
-    redirect(redirectTo)
+    // Use redirect() to handle the redirect server-side
+    // This should work now that we've fixed the middleware and server client
+    try {
+      redirect(redirectTo)
+    } catch (redirectError) {
+      // If redirect fails, return success and let the client handle it
+      console.log('Server-side redirect failed, returning success to client')
+      return {
+        success: true,
+        user: authData.user.id,
+        redirectTo
+      }
+    }
   } catch (err) {
     console.error('Unexpected error during login:', err)
     return {

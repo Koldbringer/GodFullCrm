@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createRouteClient } from '@/lib/supabase/route';
 import { NextResponse } from 'next/server';
 
 // API Route for managing users and roles
@@ -7,7 +6,12 @@ import { NextResponse } from 'next/server';
 // or Edge Functions for security. This is a simplified example for role management.
 
 export async function GET(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createRouteClient();
+
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+  }
+
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
 
@@ -38,7 +42,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createRouteClient();
+
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+  }
+
   const { userId, roleId } = await request.json();
 
   if (!userId || !roleId) {
@@ -49,7 +58,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from('user_roles')
     .insert([{ user_id: userId, role_id: roleId }])
-    .select();
+    .select() as any;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -59,7 +68,12 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createRouteClient();
+
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+  }
+
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
   const roleId = searchParams.get('roleId');
@@ -73,7 +87,7 @@ export async function DELETE(request: Request) {
     .from('user_roles')
     .delete()
     .eq('user_id', userId)
-    .eq('role_id', roleId);
+    .eq('role_id', roleId) as any;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -82,111 +96,5 @@ export async function DELETE(request: Request) {
   return NextResponse.json({ message: 'Role removed successfully' });
 }
 
-// Note: PUT operation for roles would typically involve updating role permissions,
-// which is not covered in this simplified example.
-
-export async function GET_LOGS(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
-  const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit') as string) : 100;
-  const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset') as string) : 0;
-
-  let query = supabase
-    .from('user_activity_logs')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
-
-  if (userId) {
-    query = query.eq('user_id', userId);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data);
-}
-
-export async function POST_ROLE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-  const role = await request.json();
-
-  const { data, error } = await supabase
-    .from('user_roles')
-    .insert([role])
-    .select();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data);
-}
-
-export async function GET_ROLE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-  const { searchParams } = new URL(request.url);
-  const roleId = searchParams.get('roleId');
-
-  if (!roleId) {
-    return NextResponse.json({ error: 'roleId is required' }, { status: 400 });
-  }
-
-  const { data, error } = await supabase
-    .from('user_roles')
-    .select('*')
-    .eq('id', roleId)
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data);
-}
-
-export async function PUT_ROLE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-  const { id, ...role } = await request.json();
-
-  if (!id) {
-    return NextResponse.json({ error: 'ID is required for PUT operation' }, { status: 400 });
-  }
-
-  const { data, error } = await supabase
-    .from('user_roles')
-    .update(role)
-    .eq('id', id)
-    .select();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data);
-}
-
-export async function DELETE_ROLE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-  const { searchParams } = new URL(request.url);
-  const roleId = searchParams.get('roleId');
-
-  if (!roleId) {
-    return NextResponse.json({ error: 'roleId is required for DELETE operation' }, { status: 400 });
-  }
-
-  const { error } = await supabase
-    .from('user_roles')
-    .delete()
-    .eq('id', roleId);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ message: 'Role deleted successfully' });
-}
+// Note: Additional user management functions have been removed
+// They will be implemented properly in a future update

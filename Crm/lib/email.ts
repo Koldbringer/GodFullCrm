@@ -8,17 +8,17 @@ interface EmailOptions {
 
 export function sendEmail({ to, subject, body }: EmailOptions) {
   const transporter = nodemailer.createTransport({
-    host: 'smtp.example.com',
+    host: 'serwer2440139.home.pl',
     port: 587,
     secure: false, // true for 465, false for other ports
     auth: {
-      user: 'your-email@example.com',
-      pass: 'your-password',
+      user: 'grzegorz@koldbringers.pl',
+      pass: 'blaeritipol',
     },
   });
 
   const mailOptions: nodemailer.SendMailOptions = {
-    from: 'your-email@example.com',
+    from: 'grzegorz@koldbringers.pl',
     to,
     subject,
     text: body,

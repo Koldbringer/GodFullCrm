@@ -1,11 +1,10 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 
 // API Route for managing external integrations settings
 
 export async function GET(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -14,7 +13,7 @@ export async function GET(request: Request) {
       .from('external_integrations_settings')
       .select('*')
       .eq('id', id)
-      .single();
+      .single() as any;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -24,7 +23,7 @@ export async function GET(request: Request) {
   } else {
     const { data, error } = await supabase
       .from('external_integrations_settings')
-      .select('*');
+      .select('*') as any;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -35,13 +34,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   const integrationSettings = await request.json();
 
   const { data, error } = await supabase
     .from('external_integrations_settings')
     .insert([integrationSettings])
-    .select();
+    .select() as any;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -51,7 +50,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   const { id, ...integrationSettings } = await request.json();
 
   if (!id) {
@@ -62,7 +61,7 @@ export async function PUT(request: Request) {
     .from('external_integrations_settings')
     .update(integrationSettings)
     .eq('id', id)
-    .select();
+    .select() as any;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -72,7 +71,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -83,7 +82,7 @@ export async function DELETE(request: Request) {
   const { error } = await supabase
     .from('external_integrations')
     .delete()
-    .eq('id', id);
+    .eq('id', id) as any;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

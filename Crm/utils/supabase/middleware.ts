@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { SUPABASE_CONFIG } from '@/lib/supabase/config'
 
 export async function updateSession(request: NextRequest) {
   // Create a response object that we'll modify and return
@@ -11,8 +12,8 @@ export async function updateSession(request: NextRequest) {
 
   // Create a Supabase client using the request cookies
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SUPABASE_CONFIG.url,
+    SUPABASE_CONFIG.anonKey,
     {
       cookies: {
         get(name) {
@@ -33,34 +34,38 @@ export async function updateSession(request: NextRequest) {
             ...options,
           })
         },
-        remove(name, options) {
+        remove(name) {
           // If we're in a middleware, we need to use the request's cookies
-          request.cookies.delete({
-            name,
-            ...options,
-          })
+          request.cookies.delete(name)
 
           // Update the response cookies
-          response.cookies.delete({
-            name,
-            ...options,
-          })
+          response.cookies.delete(name)
         },
       },
     }
   )
 
-  // IMPORTANT: Do not add any code between client creation and auth.getUser()
+  // IMPORTANT: Do not add any code between client creation and auth.getSession()
   // This is critical for proper session management
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  // Get user from session
+  const user = session?.user
+
+  // Add debug route that should always be accessible
+  const isDebugRoute = request.nextUrl.pathname.startsWith('/auth-debug')
 
   // Define routes that don't require authentication
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login') ||
                       request.nextUrl.pathname.startsWith('/auth') ||
                       request.nextUrl.pathname.startsWith('/register') ||
-                      request.nextUrl.pathname.startsWith('/forgot-password')
+                      request.nextUrl.pathname.startsWith('/forgot-password') ||
+                      isDebugRoute
+
+  // Log authentication status for debugging
+  console.log(`Middleware: Path=${request.nextUrl.pathname}, User=${user ? user.id : 'not authenticated'}, IsAuthRoute=${isAuthRoute}, HasSession=${!!session}`)
 
   if (!user && !isAuthRoute) {
     // Store the original URL to redirect back after login
@@ -70,6 +75,7 @@ export async function updateSession(request: NextRequest) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirectTo', redirectUrl.pathname + redirectUrl.search)
 
+    console.log(`Middleware: Redirecting to ${loginUrl.toString()}`)
     return NextResponse.redirect(loginUrl)
   }
 

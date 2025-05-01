@@ -283,23 +283,35 @@ export async function updateDevice(id: string, device: Database['public']['Table
 
 // Funkcje dla zleceń serwisowych
 export async function getServiceOrders() {
-  // Select only necessary columns for performance
-  const { data, error } = await supabase
-    .from('service_orders')
-    .select(`
-      id, title, status, priority, scheduled_start, service_type, customer_id, site_id, technician_id,
-      customers(name),
-      sites(name),
-      technicians(name)
-    `)
-    .order('scheduled_start', { ascending: false })
-
-  if (error) {
-    console.error('Error fetching service orders:', error)
+  // Check if Supabase client is initialized
+  if (!supabase) {
+    console.error('Supabase client is not initialized')
     return []
   }
 
-  return data
+  try {
+    // Select only necessary columns for performance
+    const { data, error } = await supabase
+      .from('service_orders')
+      .select(`
+        id, title, status, priority, scheduled_start, service_type, customer_id, site_id, technician_id, device_id,
+        customers(name),
+        sites(name),
+        technicians(name),
+        devices(model, type)
+      `)
+      .order('scheduled_start', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching service orders:', error)
+      return []
+    }
+
+    return data
+  } catch (e) {
+    console.error('Exception fetching service orders:', e)
+    return []
+  }
 }
 
 export async function getServiceOrderById(id: string) {

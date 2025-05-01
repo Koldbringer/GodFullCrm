@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -13,8 +12,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 export default async function ContractPage({ params }: { params: { id: string } }) {
-  const cookieStore = cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+  const supabase = await createClient();
   const { data: contract, error } = await supabase
     .from('contracts')
     .select('*, tickets(*), attachments(*)')

@@ -22,7 +22,8 @@ import {
   Settings,
   HelpCircle,
   ScrollText,
-  Map
+  Map,
+  Bot
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -113,6 +114,11 @@ export function SidebarNav({ className, collapsed = false }: SidebarNavProps) {
       href: "/tickets",
       icon: <TicketCheck className="h-5 w-5" />,
       badge: 3
+    },
+    {
+      title: "Automatyzacja",
+      href: "/automation",
+      icon: <Bot className="h-5 w-5" />
     },
     {
       title: "Dokumenty",

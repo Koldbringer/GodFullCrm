@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase"
+import { createServerClient } from "@/lib/supabase/server"
 import { InventoryView } from "@/components/inventory/inventory-view"
 
 // Typ danych dla produktu magazynowego
