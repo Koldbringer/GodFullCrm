@@ -32,6 +32,7 @@ import { TimeConditionNode } from "./nodes/TimeConditionNode"; // Import TimeCon
 import { DataConditionNode } from "./nodes/DataConditionNode"; // Import DataConditionNode
 import { AiAnalysisNode } from "./nodes/AiAnalysisNode"; // Import AiAnalysisNode
 import { DynamicLinkNode } from "./nodes/DynamicLinkNode"; // Import DynamicLinkNode
+import { MCPCommandNode } from "./nodes/MCPCommandNode";
 
 // Define the base Schemes type using ClassicPreset types
 type Schemes = GetSchemes<
