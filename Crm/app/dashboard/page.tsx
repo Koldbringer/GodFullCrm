@@ -384,6 +384,32 @@ export default function DashboardPage() {
 
         {/* Główne panele - używamy komponentu klienta z preferencjami użytkownika */}
         <DashboardClient />
+
+        {/* Advanced Analytics Dashboard */}
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold">Zaawansowana analityka</h3>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard/analytics">
+                Pełny widok
+                <ArrowUpRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-6">
+              <Suspense fallback={<div className="h-96 w-full flex items-center justify-center"><Skeleton className="h-80 w-full" /></div>}>
+                <div className="h-96">
+                  <iframe
+                    src="/dashboard/analytics?embed=true"
+                    className="w-full h-full border-0"
+                    title="Analytics Dashboard"
+                  />
+                </div>
+              </Suspense>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

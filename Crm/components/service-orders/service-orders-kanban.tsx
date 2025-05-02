@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Plus } from "lucide-react" // Keep Plus for the "Nowe zlecenie" button
 import { toast } from "sonner"
 import "@/styles/kanban.css"
@@ -12,8 +12,10 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs" // Keep Tabs components
 import { getServiceOrders, updateServiceOrder } from "@/lib/api"
-import { createClient } from "@/lib/supabase"
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription"
+import { useRealtime } from "@/components/providers/RealtimeProvider"
 import { KanbanColumn } from "./kanban-column" // Import the new KanbanColumn component
+import { NewServiceOrderDialog } from "./new-service-order-dialog" // Import the new dialog component
 import { ServiceOrder } from "../../lib/types" // Import the shared ServiceOrder type
 
 // Mapowanie statusów z bazy danych na statusy w UI
@@ -56,6 +58,8 @@ const fallbackServiceOrdersData: ServiceOrder[] = [
     notes: null,
     cost: null,
     payment_status: null,
+    workflow_id: null,
+    current_step: null,
     customers: {
       id: "c1",
       name: "Firma ABC",
@@ -91,6 +95,8 @@ const fallbackServiceOrdersData: ServiceOrder[] = [
     notes: "Klient zgłasza hałas podczas pracy urządzenia",
     cost: null,
     payment_status: null,
+    workflow_id: "wf1",
+    current_step: 2,
     customers: {
       id: "c2",
       name: "Jan Kowalski",
@@ -129,6 +135,8 @@ const fallbackServiceOrdersData: ServiceOrder[] = [
     notes: null,
     cost: null,
     payment_status: null,
+    workflow_id: "wf2",
+    current_step: 1,
     customers: {
       id: "c3",
       name: "Anna Nowak",
@@ -213,8 +221,27 @@ export function ServiceOrdersKanban() {
   const [loading, setLoading] = useState(true)
   const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  // We'll use getFilteredOrdersByStatus() directly instead of maintaining this state
-  // to avoid potential infinite loops
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileViewStatus, setMobileViewStatus] = useState<string>("new")
+  const [newOrderDialogOpen, setNewOrderDialogOpen] = useState(false)
+
+  // Check if we're in mobile view
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    // Initial check
+    checkMobile()
+
+    // Add event listener for window resize
+    window.addEventListener('resize', checkMobile)
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', checkMobile)
+    }
+  }, [])
 
   // Pobieranie danych z API
   useEffect(() => {
@@ -222,12 +249,38 @@ export function ServiceOrdersKanban() {
       try {
         const data = await getServiceOrders()
         // Ensure data matches ServiceOrder type, handle potential null statuses
-        const formattedData: ServiceOrder[] = data.map(order => ({
-           ...order,
-           status: order.status ?? 'unknown', // Provide a default status if null
-           // Add other default values for potentially null fields if necessary
-        }));
-        setServiceOrders(formattedData);
+        if (Array.isArray(data)) {
+          const formattedData: ServiceOrder[] = data.map((order: any) => {
+            return {
+              id: order.id || '',
+              title: order.title || '',
+              description: order.description || null,
+              status: order.status || 'unknown',
+              priority: order.priority || null,
+              service_type: order.service_type || null,
+              created_at: order.created_at || null,
+              updated_at: order.updated_at || null,
+              customer_id: order.customer_id || null,
+              site_id: order.site_id || null,
+              device_id: order.device_id || null,
+              technician_id: order.technician_id || null,
+              scheduled_start: order.scheduled_start || null,
+              scheduled_end: order.scheduled_end || null,
+              completed_date: null,
+              estimated_duration: null,
+              notes: null,
+              cost: order.cost || null,
+              payment_status: order.payment_status || null,
+              workflow_id: order.workflow_id || null,
+              current_step: order.current_step || null,
+              customers: order.customers || undefined,
+              sites: order.sites || undefined,
+              devices: order.devices || undefined,
+              technicians: order.technicians || undefined
+            };
+          });
+          setServiceOrders(formattedData);
+        }
       } catch (error) {
         console.error('Error fetching service orders:', error)
         setServiceOrders(fallbackServiceOrdersData)
@@ -238,40 +291,70 @@ export function ServiceOrdersKanban() {
     }
 
     fetchServiceOrders()
+  }, []) // Pusta tablica zależności, aby efekt uruchamiał się tylko raz
 
-    // Create a Supabase client instance
-    const supabase = createClient() // Jedna deklaracja klienta
+  // Use our new real-time subscription hook
+  useRealtime() // Initialize real-time context
 
-    // Subskrypcja na zmiany w tabeli service_orders
-    if (!supabase) { // Dodane sprawdzenie null/undefined
-      console.error("Supabase client is not initialized.");
-      return; // Wychodzimy z useEffect jeśli klient nie jest dostępny
-    }
-    const serviceOrdersSubscription = supabase // Poprawne przypisanie subskrypcji
-      .channel('service-orders-changes')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'service_orders' },
-        async (payload: any) => { // Użycie any dla payload, jeśli typowanie jest problemem, można doprecyzować później
-          console.log('Zmiana w tabeli service_orders:', payload)
-          // Odświeżenie danych po zmianie
-          const data = await getServiceOrders()
-           const formattedData: ServiceOrder[] = data.map(order => ({
-              ...order,
-              status: order.status ?? 'unknown', // Provide a default status if null
-              // Add other default values for potentially null fields if necessary
-           }));
-          setServiceOrders(formattedData)
+  // Set up real-time subscription for service orders
+  useRealtimeSubscription({
+    table: 'service_orders',
+    event: '*',
+    onChange: async (payload) => {
+      console.log('Zmiana w tabeli service_orders:', payload)
+
+      try {
+        // Refresh data when a change is detected
+        const data = await getServiceOrders()
+        if (Array.isArray(data)) {
+          const formattedData: ServiceOrder[] = data.map((order: any) => {
+            return {
+              id: order.id || '',
+              title: order.title || '',
+              description: order.description || null,
+              status: order.status || 'unknown',
+              priority: order.priority || null,
+              service_type: order.service_type || null,
+              created_at: order.created_at || null,
+              updated_at: order.updated_at || null,
+              customer_id: order.customer_id || null,
+              site_id: order.site_id || null,
+              device_id: order.device_id || null,
+              technician_id: order.technician_id || null,
+              scheduled_start: order.scheduled_start || null,
+              scheduled_end: order.scheduled_end || null,
+              completed_date: null,
+              estimated_duration: null,
+              notes: null,
+              cost: order.cost || null,
+              payment_status: order.payment_status || null,
+              workflow_id: order.workflow_id || null,
+              current_step: order.current_step || null,
+              customers: order.customers || undefined,
+              sites: order.sites || undefined,
+              devices: order.devices || undefined,
+              technicians: order.technicians || undefined
+            };
+          });
+          setServiceOrders(formattedData);
         }
-      )
-      .subscribe()
 
-    // Czyszczenie subskrypcji przy odmontowaniu komponentu
-    return () => {
-      if (serviceOrdersSubscription && supabase) { // Dodane sprawdzenie null/undefined
-        supabase.removeChannel(serviceOrdersSubscription) // Poprawne użycie removeChannel
+        // Show a toast notification for the change
+        const eventType = payload.eventType
+        const orderTitle = payload.new?.title || 'Zlecenie'
+
+        if (eventType === 'INSERT') {
+          toast.success(`Nowe zlecenie: ${orderTitle}`)
+        } else if (eventType === 'UPDATE') {
+          toast.info(`Zaktualizowano zlecenie: ${orderTitle}`)
+        } else if (eventType === 'DELETE') {
+          toast.info(`Usunięto zlecenie`)
+        }
+      } catch (error) {
+        console.error('Error refreshing service orders after real-time update:', error)
       }
     }
-  }, []) // Pusta tablica zależności, aby efekt uruchamiał się tylko raz
+  })
 
   // Filtrowanie zleceń
   const filteredOrders = serviceOrders.filter(
@@ -332,7 +415,7 @@ export function ServiceOrdersKanban() {
     <div className="space-y-4">
       {/* Tabs for different service types */}
       <Tabs defaultValue="all" value={serviceTypeTab} onValueChange={setServiceTypeTab} className="w-full">
-        <TabsList className="grid grid-cols-5 mb-4">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-5 mb-4">
           <TabsTrigger value="all">
             Wszystkie
             <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
@@ -345,6 +428,28 @@ export function ServiceOrdersKanban() {
               {filteredOrders.filter(o => o.service_type === 'service').length}
             </span>
           </TabsTrigger>
+          <TabsTrigger value="maintenance" className="hidden sm:flex">
+            Przeglądy
+            <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+              {filteredOrders.filter(o => o.service_type === 'maintenance').length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="installation" className="hidden sm:flex">
+            Montażowe
+            <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+              {filteredOrders.filter(o => o.service_type === 'installation').length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="inspection" className="hidden sm:flex">
+            Oględziny
+            <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+              {filteredOrders.filter(o => o.service_type === 'inspection').length}
+            </span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Mobile-only tabs for the remaining service types */}
+        <TabsList className="grid grid-cols-3 mb-4 sm:hidden">
           <TabsTrigger value="maintenance">
             Przeglądy
             <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
@@ -366,17 +471,31 @@ export function ServiceOrdersKanban() {
         </TabsList>
       </Tabs>
 
-      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-        <div className="flex w-full max-w-sm items-center space-x-2">
+      <div className="flex flex-col gap-4">
+        <div className="flex w-full items-center space-x-2">
           <Input
             placeholder="Szukaj zlecenia..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1"
           />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              setPriorityFilter(null);
+              setTechnicianFilter(null);
+              setSearchQuery('');
+              setServiceTypeTab("all");
+            }}
+            title="Wyczyść filtry"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </Button>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 flex-1">
             <label htmlFor="priority-filter" className="text-xs text-muted-foreground">Priorytet</label>
             <select
               id="priority-filter"
@@ -392,7 +511,7 @@ export function ServiceOrdersKanban() {
             </select>
           </div>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 flex-1">
             <label htmlFor="technician-filter" className="text-xs text-muted-foreground">Technik</label>
             <select
               id="technician-filter"
@@ -406,46 +525,75 @@ export function ServiceOrdersKanban() {
               {Array.from(new Set(serviceOrders.map(order => order.technician_id))).filter(Boolean).map(techId => {
                 const tech = serviceOrders.find(order => order.technician_id === techId)?.technicians;
                 return tech ? (
-                  <option key={techId} value={techId}>{tech.name}</option>
+                  <option key={String(techId)} value={String(techId)}>{tech.name}</option>
                 ) : null;
               })}
             </select>
           </div>
-
-          <Button
-            variant="outline"
-            onClick={() => {
-              setPriorityFilter(null);
-              setTechnicianFilter(null);
-              setSearchQuery('');
-              setServiceTypeTab("all");
-            }}
-          >
-            Wyczyść filtry
-          </Button>
         </div>
       </div>
 
       {/* Display current service type as title */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold tracking-tight">
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
           Zlecenia {serviceTypeTab !== 'all' ? serviceTypeMapping[serviceTypeTab] : ''}
         </h2>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={() => setNewOrderDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Nowe zlecenie
+          <span className="hidden sm:inline">Nowe zlecenie</span>
+          <span className="sm:hidden">Nowe</span>
         </Button>
       </div>
 
+      {/* Mobile view status selector */}
+      {isMobile && (
+        <div className="mb-4">
+          <Tabs defaultValue="new" value={mobileViewStatus} onValueChange={setMobileViewStatus} className="w-full">
+            <TabsList className="grid grid-cols-5 mb-4">
+              <TabsTrigger value="new">
+                Nowe
+                <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+                  {filteredOrdersByStatus["new"].length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="in-progress">
+                W trakcie
+                <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+                  {filteredOrdersByStatus["in-progress"].length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="scheduled">
+                Zaplanowane
+                <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+                  {filteredOrdersByStatus["scheduled"].length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="completed">
+                Zakończone
+                <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+                  {filteredOrdersByStatus["completed"].length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="cancelled">
+                Anulowane
+                <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+                  {filteredOrdersByStatus["cancelled"].length}
+                </span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
+
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: isMobile ? 1 : 5 }).map((_, i) => (
             <div key={i} className="space-y-2">
               <div className="flex items-center justify-between">
                 <Skeleton className="h-6 w-24" />
                 <Skeleton className="h-6 w-8" />
               </div>
-              <div className="bg-muted/50 p-2 rounded-md min-h-[500px]">
+              <div className="bg-muted/50 p-2 rounded-md min-h-[300px] md:min-h-[500px]">
                 {Array.from({ length: 3 }).map((_, j) => (
                   <Skeleton key={j} className="h-32 w-full mb-3" />
                 ))}
@@ -454,19 +602,41 @@ export function ServiceOrdersKanban() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto">
-          {Object.entries(filteredOrdersByStatus).map(([status, orders]) => (
+        <>
+          {/* Desktop view */}
+          <div className="hidden md:grid md:grid-cols-5 gap-4 overflow-x-auto">
+            {Object.entries(filteredOrdersByStatus).map(([status, orders]) => (
+              <KanbanColumn
+                key={status}
+                status={status}
+                orders={orders}
+                loading={loading}
+                updatingOrderId={updatingOrder}
+                handleDrop={handleDrop}
+              />
+            ))}
+          </div>
+
+          {/* Mobile view - only show the selected status */}
+          <div className="md:hidden">
             <KanbanColumn
-              key={status}
-              status={status}
-              orders={orders}
+              key={mobileViewStatus}
+              status={mobileViewStatus}
+              orders={filteredOrdersByStatus[mobileViewStatus as keyof typeof filteredOrdersByStatus] || []}
               loading={loading}
               updatingOrderId={updatingOrder}
               handleDrop={handleDrop}
+              isMobileView={true}
             />
-          ))}
-        </div>
+          </div>
+        </>
       )}
+
+      {/* New Service Order Dialog */}
+      <NewServiceOrderDialog
+        open={newOrderDialogOpen}
+        onOpenChange={setNewOrderDialogOpen}
+      />
     </div>
   )
 }

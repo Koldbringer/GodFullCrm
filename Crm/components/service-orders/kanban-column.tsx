@@ -51,9 +51,10 @@ interface KanbanColumnProps {
   loading: boolean;
   updatingOrderId: string | null;
   handleDrop: (orderId: string, newStatus: string) => void;
+  isMobileView?: boolean;
 }
 
-export function KanbanColumn({ status, orders, loading, updatingOrderId, handleDrop }: KanbanColumnProps) {
+export function KanbanColumn({ status, orders, loading, updatingOrderId, handleDrop, isMobileView = false }: KanbanColumnProps) {
   const columnRef = useRef<HTMLDivElement>(null);
   const [isDraggedOver, setIsDraggedOver] = useState(false); // State for visual feedback
 
@@ -115,31 +116,33 @@ export function KanbanColumn({ status, orders, loading, updatingOrderId, handleD
 
   return (
     <div
-      className={`space-y-2 transition-all duration-200`}
+      className={`space-y-2 transition-all duration-200 ${isMobileView ? 'w-full' : ''}`}
       key={status}
       ref={columnRef}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {getStatusIcon(status)}
-          <h3 className="font-medium">{getStatusTitle(status)}</h3>
+      {!isMobileView && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {getStatusIcon(status)}
+            <h3 className="font-medium">{getStatusTitle(status)}</h3>
+          </div>
+          <Badge variant="outline">{orders.length}</Badge>
         </div>
-        <Badge variant="outline">{orders.length}</Badge>
-      </div>
+      )}
       <div
-        className={`p-2 rounded-md min-h-[500px] relative transition-colors duration-200 ${
+        className={`p-2 rounded-md ${isMobileView ? 'min-h-[300px]' : 'min-h-[500px]'} relative transition-colors duration-200 ${
           isDraggedOver
             ? 'bg-primary/10 border-2 border-dashed border-primary/50'
             : 'bg-muted/50 border-2 border-transparent'
         }`}
       >
         {loading ? (
-           Array.from({ length: 3 }).map((_, j) => (
+           Array.from({ length: isMobileView ? 5 : 3 }).map((_, j) => (
              <Skeleton key={j} className="h-32 w-full mb-3" />
            ))
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-20 text-center text-muted-foreground">
-            <p className="text-sm">Brak zleceń</p>
+            <p className="text-sm">Brak zleceń {getStatusTitle(status).toLowerCase()}</p>
             {isDraggedOver && (
               <p className="text-xs mt-2 text-primary">Upuść tutaj, aby zmienić status</p>
             )}
@@ -147,7 +150,12 @@ export function KanbanColumn({ status, orders, loading, updatingOrderId, handleD
         ) : (
           <>
             {orders.map((order) => (
-              <ServiceOrderCard order={order} key={order.id} updatingOrderId={updatingOrderId} />
+              <ServiceOrderCard
+                order={order}
+                key={order.id}
+                updatingOrderId={updatingOrderId}
+                isMobileView={isMobileView}
+              />
             ))}
             {isDraggedOver && (
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">

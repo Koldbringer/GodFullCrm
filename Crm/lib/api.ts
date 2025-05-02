@@ -1,8 +1,13 @@
 import { createClient } from './supabase'
 import { Database } from '@/types/supabase'
+import { supabaseCache } from './supabase/cache'
+import { handleSupabaseError, logSupabaseError, withFallback } from './supabase/error-handler'
 
 // Create a Supabase client instance
 const supabase = createClient()
+
+// Default cache TTL in milliseconds (5 minutes)
+const DEFAULT_CACHE_TTL = 5 * 60 * 1000
 
 // Typy podstawowe
 export type Customer = Database['public']['Tables']['customers']['Row']
@@ -37,6 +42,7 @@ export async function getCustomers({
   offset,
   sortBy = 'name',
   sortOrder = 'asc',
+  useCache = true,
 }: {
   filter?: string;
   status?: string;
@@ -45,81 +51,149 @@ export async function getCustomers({
   offset?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  useCache?: boolean;
 } = {}) {
-  console.log("Wywołanie getCustomers z parametrami:", { filter, status, type, limit, offset, sortBy, sortOrder });
-  // Select only necessary columns for performance. Adjust if more columns are needed.
-  // Using count: 'estimated' for potentially better performance on large tables.
-  // Change to 'exact' if precise count is strictly required, but be aware of potential performance impact.
-  let query = supabase
-    .from('customers')
-    .select('id, name', { count: 'estimated' }) as any;
+  // Generate a cache key based on the query parameters
+  const cacheKey = `customers:${JSON.stringify({ filter, status, type, limit, offset, sortBy, sortOrder })}`
 
-  if (filter) query = query.ilike('name', `%${filter}%`);
-  if (status) query = query.eq('status', status);
-  if (type) query = query.eq('type', type);
-  if (limit) query = query.limit(limit);
-  if (typeof offset === 'number') {
-    query = query.offset(offset);
+  // If caching is enabled, try to get from cache first
+  if (useCache) {
+    const cachedData = supabaseCache.get<{ data: any[], count: number }>(cacheKey)
+    if (cachedData) {
+      return cachedData
+    }
   }
 
-  const { data, error, count } = await query;
-  console.log("Wynik z Supabase:", { data, error, count });
-  if (error) {
-    console.error('Error fetching customers:', error);
+  try {
+    console.log("Wywołanie getCustomers z parametrami:", { filter, status, type, limit, offset, sortBy, sortOrder });
+
+    // Select only necessary columns for performance. Adjust if more columns are needed.
+    // Using count: 'estimated' for potentially better performance on large tables.
+    // Change to 'exact' if precise count is strictly required, but be aware of potential performance impact.
+    let query = supabase
+      .from('customers')
+      .select('id, name', { count: 'estimated' }) as any;
+
+    if (filter) query = query.ilike('name', `%${filter}%`);
+    if (status) query = query.eq('status', status);
+    if (type) query = query.eq('type', type);
+    if (limit) query = query.limit(limit);
+    if (typeof offset === 'number') {
+      query = query.offset(offset);
+    }
+
+    // Add sorting
+    query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    const result = { data: data || [], count: count || 0 };
+
+    // Cache the result if caching is enabled
+    if (useCache) {
+      supabaseCache.set(cacheKey, result, { ttl: DEFAULT_CACHE_TTL });
+    }
+
+    return result;
+  } catch (error) {
+    // Log and handle the error
+    logSupabaseError(error, 'getCustomers');
+
+    // Return empty result
     return { data: [], count: 0 };
   }
-  // Note: 'data' now only contains 'id' and 'name'.
-  return { data, count };
 }
 
-export async function getCustomerById(id: string, includeRelated: boolean = false) {
-  const query = includeRelated
-    ? supabase.from('customers').select(`
-      *,
-      sites:sites(id, name, city, status),
-      customer_contacts:customer_contacts(id, name, is_primary, phone, email),
-      service_orders:service_orders(id, title, status, priority, scheduled_date),
-      invoices:invoices(id, invoice_number, due_date, total_amount, status),
-      warranty_claims:warranty_claims(id, claim_date, status, devices(name))
-    `)
-    : supabase.from('customers').select('*');
+export async function getCustomerById(id: string, includeRelated: boolean = false, useCache: boolean = true) {
+  // Generate a cache key based on the query parameters
+  const cacheKey = `customer:${id}:${includeRelated}`
 
-  const { data, error } = await query.eq('id', id).single();
+  // If caching is enabled, try to get from cache first
+  if (useCache) {
+    const cachedData = supabaseCache.get(cacheKey)
+    if (cachedData) {
+      return cachedData
+    }
+  }
 
-  if (error) {
-    console.error(`Error fetching customer with id ${id}:`, error);
+  try {
+    const query = includeRelated
+      ? supabase.from('customers').select(`
+        *,
+        sites:sites(id, name, city, status),
+        customer_contacts:customer_contacts(id, name, is_primary, phone, email),
+        service_orders:service_orders(id, title, status, priority, scheduled_start),
+        invoices:invoices(id, invoice_number, due_date, total_amount, status),
+        warranty_claims:warranty_claims(id, claim_date, status, devices(name))
+      `)
+      : supabase.from('customers').select('*');
+
+    const { data, error } = await query.eq('id', id).single();
+
+    if (error) {
+      throw error;
+    }
+
+    // Cache the result if caching is enabled
+    if (useCache && data) {
+      supabaseCache.set(cacheKey, data, { ttl: DEFAULT_CACHE_TTL });
+    }
+
+    return data;
+  } catch (error) {
+    // Log and handle the error
+    logSupabaseError(error, `getCustomerById(${id})`);
     return null;
   }
-  return data;
 }
 
 export async function createCustomer(customer: Database['public']['Tables']['customers']['Insert']) {
-  const { data, error } = await supabase
-    .from('customers')
-    .insert(customer)
-    .select()
+  try {
+    const { data, error } = await supabase
+      .from('customers')
+      .insert(customer)
+      .select()
 
-  if (error) {
-    console.error('Error creating customer:', error)
+    if (error) {
+      throw error
+    }
+
+    // Invalidate any cache entries that might contain customer lists
+    supabaseCache.remove('customers:')
+
+    return data[0]
+  } catch (error) {
+    logSupabaseError(error, 'createCustomer')
     return null
   }
-
-  return data[0]
 }
 
 export async function updateCustomer(id: string, customer: Database['public']['Tables']['customers']['Update']) {
-  const { data, error } = await supabase
-    .from('customers')
-    .update(customer)
-    .eq('id', id)
-    .select()
+  try {
+    const { data, error } = await supabase
+      .from('customers')
+      .update(customer)
+      .eq('id', id)
+      .select()
 
-  if (error) {
-    console.error(`Error updating customer with id ${id}:`, error)
+    if (error) {
+      throw error
+    }
+
+    // Invalidate any cache entries that might contain this customer
+    supabaseCache.remove(`customer:${id}:true`)
+    supabaseCache.remove(`customer:${id}:false`)
+    supabaseCache.remove('customers:')
+
+    return data[0]
+  } catch (error) {
+    logSupabaseError(error, `updateCustomer(${id})`)
     return null
   }
-
-  return data[0]
 }
 
 // Funkcje dla lokalizacji
@@ -1586,4 +1660,242 @@ export async function deleteTicket(id: string) {
   }
 
   return true
+}
+
+// Workflow functions
+export async function getWorkflowTemplates(serviceType?: string) {
+  let query = supabase
+    .from('workflow_templates')
+    .select('*')
+    .eq('is_active', true)
+    .order('name')
+
+  if (serviceType) {
+    query = query.eq('service_type', serviceType)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('Error fetching workflow templates:', error)
+    return []
+  }
+
+  return data
+}
+
+export async function getWorkflowTemplateById(id: string, includeSteps: boolean = true) {
+  const query = includeSteps
+    ? supabase.from('workflow_templates').select(`
+        *,
+        workflow_steps(*)
+      `)
+    : supabase.from('workflow_templates').select('*')
+
+  const { data, error } = await query
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    console.error(`Error fetching workflow template with id ${id}:`, error)
+    return null
+  }
+
+  return data
+}
+
+export async function createWorkflowTemplate(template: any) {
+  const { data, error } = await supabase
+    .from('workflow_templates')
+    .insert(template)
+    .select()
+
+  if (error) {
+    console.error('Error creating workflow template:', error)
+    return null
+  }
+
+  return data[0]
+}
+
+export async function updateWorkflowTemplate(id: string, template: any) {
+  const { data, error } = await supabase
+    .from('workflow_templates')
+    .update(template)
+    .eq('id', id)
+    .select()
+
+  if (error) {
+    console.error(`Error updating workflow template with id ${id}:`, error)
+    return null
+  }
+
+  return data[0]
+}
+
+export async function getWorkflowSteps(templateId: string) {
+  const { data, error } = await supabase
+    .from('workflow_steps')
+    .select('*')
+    .eq('workflow_template_id', templateId)
+    .order('order')
+
+  if (error) {
+    console.error(`Error fetching workflow steps for template ${templateId}:`, error)
+    return []
+  }
+
+  return data
+}
+
+export async function createWorkflowStep(step: any) {
+  const { data, error } = await supabase
+    .from('workflow_steps')
+    .insert(step)
+    .select()
+
+  if (error) {
+    console.error('Error creating workflow step:', error)
+    return null
+  }
+
+  return data[0]
+}
+
+export async function updateWorkflowStep(id: string, step: any) {
+  const { data, error } = await supabase
+    .from('workflow_steps')
+    .update(step)
+    .eq('id', id)
+    .select()
+
+  if (error) {
+    console.error(`Error updating workflow step with id ${id}:`, error)
+    return null
+  }
+
+  return data[0]
+}
+
+export async function getWorkflowExecutions(serviceOrderId?: string) {
+  let query = supabase
+    .from('workflow_executions')
+    .select(`
+      *,
+      workflow_templates(name, description),
+      service_orders(title, id)
+    `)
+    .order('started_at', { ascending: false })
+
+  if (serviceOrderId) {
+    query = query.eq('service_order_id', serviceOrderId)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('Error fetching workflow executions:', error)
+    return []
+  }
+
+  return data
+}
+
+export async function getWorkflowExecutionById(id: string) {
+  const { data, error } = await supabase
+    .from('workflow_executions')
+    .select(`
+      *,
+      workflow_templates(*, workflow_steps(*)),
+      service_orders(title, id, customer_id, customers(name))
+    `)
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    console.error(`Error fetching workflow execution with id ${id}:`, error)
+    return null
+  }
+
+  return data
+}
+
+export async function createWorkflowExecution(execution: any) {
+  const { data, error } = await supabase
+    .from('workflow_executions')
+    .insert(execution)
+    .select()
+
+  if (error) {
+    console.error('Error creating workflow execution:', error)
+    return null
+  }
+
+  return data[0]
+}
+
+export async function updateWorkflowExecution(id: string, execution: any) {
+  const { data, error } = await supabase
+    .from('workflow_executions')
+    .update(execution)
+    .eq('id', id)
+    .select()
+
+  if (error) {
+    console.error(`Error updating workflow execution with id ${id}:`, error)
+    return null
+  }
+
+  return data[0]
+}
+
+export async function advanceWorkflowStep(executionId: string, stepId: string, data: any = {}) {
+  // First get the current execution
+  const execution = await getWorkflowExecutionById(executionId)
+
+  if (!execution) {
+    console.error(`Workflow execution ${executionId} not found`)
+    return null
+  }
+
+  // Update the step history
+  const stepHistory = execution.step_history || []
+  const now = new Date().toISOString()
+
+  // Find the current step in history and mark it as completed
+  const updatedHistory = stepHistory.map(step => {
+    if (step.step_id === execution.current_step_id && !step.completed_at) {
+      return {
+        ...step,
+        completed_at: now,
+        completed_by: data.completed_by || null,
+        notes: data.notes || null,
+        form_data: data.form_data || null
+      }
+    }
+    return step
+  })
+
+  // Add the new step to history
+  updatedHistory.push({
+    step_id: stepId,
+    started_at: now,
+    completed_at: null,
+    completed_by: null,
+    notes: null,
+    form_data: null
+  })
+
+  // Update the execution
+  const updatedExecution = {
+    current_step_id: stepId,
+    step_history: updatedHistory,
+    // If this is the final step, mark the execution as completed
+    ...(data.is_final_step ? {
+      status: 'completed',
+      completed_at: now
+    } : {})
+  }
+
+  return updateWorkflowExecution(executionId, updatedExecution)
 }

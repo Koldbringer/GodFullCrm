@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { MoreHorizontal, Loader2, Calendar, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { MoreHorizontal, Loader2, Calendar, AlertCircle, CheckCircle2, Clock, GitBranch } from "lucide-react";
 import Link from "next/link";
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 
@@ -20,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Database } from "@/types/supabase";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { WorkflowProgress } from "@/components/workflows/workflow-progress";
 
 // Typ dla zlecenia serwisowego (powtórzony dla niezależności komponentu, można zrefaktoryzować)
 type ServiceOrder = Database['public']['Tables']['service_orders']['Row'] & {
@@ -31,6 +32,8 @@ type ServiceOrder = Database['public']['Tables']['service_orders']['Row'] & {
   scheduled_end: string | null;
   cost: number | null;
   payment_status: string | null;
+  workflow_id: string | null;
+  current_step: number | null;
   customers?: {
     name: string;
   };
@@ -43,6 +46,15 @@ type ServiceOrder = Database['public']['Tables']['service_orders']['Row'] & {
   };
   technicians?: {
     name: string;
+  };
+  workflow?: {
+    id: string;
+    name: string;
+    steps: {
+      id: string;
+      name: string;
+      order: number;
+    }[];
   };
 };
 
@@ -89,9 +101,10 @@ const formatDate = (dateString: string | null) => {
 interface ServiceOrderCardProps {
   order: ServiceOrder;
   updatingOrderId: string | null;
+  isMobileView?: boolean;
 }
 
-export function ServiceOrderCard({ order, updatingOrderId }: ServiceOrderCardProps) {
+export function ServiceOrderCard({ order, updatingOrderId, isMobileView = false }: ServiceOrderCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -141,7 +154,7 @@ export function ServiceOrderCard({ order, updatingOrderId }: ServiceOrderCardPro
       ref={cardRef}
       className={`mb-3 ${updatingOrderId === order.id ? 'opacity-50' : ''} ${isDragging ? 'opacity-70 shadow-lg border-primary' : ''} relative transition-all duration-200 cursor-grab active:cursor-grabbing`}
     >
-      <CardContent className="p-3">
+      <CardContent className={`p-3 ${isMobileView ? 'pb-2' : ''}`}>
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-1">
             <Badge className={getPriorityColor(order.priority)} variant="outline">
@@ -187,45 +200,124 @@ export function ServiceOrderCard({ order, updatingOrderId }: ServiceOrderCardPro
 
         <div className="mb-2">
           <h3 className="font-medium text-sm">{order.title}</h3>
-          <p className="text-xs text-muted-foreground truncate">{order.description}</p>
+          {!isMobileView && (
+            <p className="text-xs text-muted-foreground truncate">{order.description}</p>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-          <div>
-            <p className="text-muted-foreground">Klient:</p>
-            <p className="font-medium truncate">{order.customers?.name || "Nieznany"}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Lokalizacja:</p>
-            <p className="font-medium truncate">{order.sites?.name || "Nieznana"}</p>
-          </div>
-        </div>
+        {isMobileView ? (
+          // Mobile layout - more compact
+          <div className="space-y-1 text-xs">
+            <div className="flex justify-between">
+              <div>
+                <span className="text-muted-foreground">Klient: </span>
+                <span className="font-medium">{order.customers?.name || "Nieznany"}</span>
+              </div>
+              <div>
+                <Badge variant="outline" className="text-xs">
+                  {order.service_type === "maintenance" ? "Przegląd" :
+                   order.service_type === "repair" ? "Naprawa" :
+                   order.service_type === "installation" ? "Montaż" :
+                   order.service_type}
+                </Badge>
+              </div>
+            </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-          <div>
-            <p className="text-muted-foreground">Urządzenie:</p>
-            <p className="font-medium truncate">{order.devices?.model || "Nieznane"}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Technik:</p>
-            <p className="font-medium truncate">{order.technicians?.name || "Nieprzypisany"}</p>
-          </div>
-        </div>
+            <div className="flex justify-between">
+              <div>
+                <span className="text-muted-foreground">Technik: </span>
+                <span className="font-medium">{order.technicians?.name || "Nieprzypisany"}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-muted-foreground" />
+                <span>{formatDate(order.scheduled_start)}</span>
+              </div>
+            </div>
 
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3 text-muted-foreground" />
-            <span>{formatDate(order.scheduled_start)}</span>
+            {/* Show workflow progress if there's a workflow assigned (mobile view) */}
+            {order.workflow_id && (
+              <div className="mt-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <GitBranch className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">Workflow: </span>
+                    <span>{order.current_step ? `Krok ${order.current_step}` : 'Przypisany'}</span>
+                  </div>
+                </div>
+                {order.current_step && (
+                  <div className="mt-1 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500"
+                      style={{
+                        width: `${Math.min(100, (order.current_step / (order.workflow?.steps?.length || 5)) * 100)}%`
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <div>
-            <Badge variant="outline" className="text-xs">
-              {order.service_type === "maintenance" ? "Przegląd" :
-               order.service_type === "repair" ? "Naprawa" :
-               order.service_type === "installation" ? "Montaż" :
-               order.service_type}
-            </Badge>
-          </div>
-        </div>
+        ) : (
+          // Desktop layout - more detailed
+          <>
+            <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+              <div>
+                <p className="text-muted-foreground">Klient:</p>
+                <p className="font-medium truncate">{order.customers?.name || "Nieznany"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Lokalizacja:</p>
+                <p className="font-medium truncate">{order.sites?.name || "Nieznana"}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+              <div>
+                <p className="text-muted-foreground">Urządzenie:</p>
+                <p className="font-medium truncate">{order.devices?.model || "Nieznane"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Technik:</p>
+                <p className="font-medium truncate">{order.technicians?.name || "Nieprzypisany"}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-muted-foreground" />
+                <span>{formatDate(order.scheduled_start)}</span>
+              </div>
+              <div>
+                <Badge variant="outline" className="text-xs">
+                  {order.service_type === "maintenance" ? "Przegląd" :
+                   order.service_type === "repair" ? "Naprawa" :
+                   order.service_type === "installation" ? "Montaż" :
+                   order.service_type}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Show workflow progress if there's a workflow assigned */}
+            {order.workflow_id && (
+              <div className="mt-2">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <GitBranch className="h-3 w-3" />
+                  <span>Workflow: {order.current_step ? `Krok ${order.current_step}` : 'Przypisany'}</span>
+                </div>
+                {order.current_step && (
+                  <div className="mt-1 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500"
+                      style={{
+                        width: `${Math.min(100, (order.current_step / (order.workflow?.steps?.length || 5)) * 100)}%`
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
 
         {updatingOrderId === order.id && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-md">

@@ -7,6 +7,8 @@ import { SupabaseClient } from '@supabase/supabase-js'
  * Creates a Supabase client for client components
  * Uses the latest @supabase/ssr package for better Next.js integration
  * Includes error handling and caching for better performance
+ *
+ * @returns A Supabase client instance for client-side use
  */
 export function createClient(): SupabaseClient<Database> {
   try {
@@ -22,6 +24,9 @@ export function createClient(): SupabaseClient<Database> {
       {
         cookieOptions: {
           name: SUPABASE_CONFIG.cookieName,
+          path: '/',
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
           ...SUPABASE_CONFIG.cookieOptions
         },
         // Add auth configuration for better session handling
@@ -29,6 +34,16 @@ export function createClient(): SupabaseClient<Database> {
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: true
+        },
+        // Add global error handler
+        global: {
+          fetch: (...args) => {
+            return fetch(...args)
+              .catch(error => {
+                console.error('Supabase fetch error:', error)
+                throw error
+              })
+          }
         }
       }
     )

@@ -1,11 +1,15 @@
 import type { Metadata } from "next"
 import { PlusCircle } from "lucide-react"
+import { Suspense } from "react"
 
 import { Button } from "@/components/ui/button"
 import { UserNav } from "@/components/user-nav"
 import { MainNav } from "@/components/main-nav"
 import { Search } from "@/components/search"
 import { InventoryServer } from "@/components/inventory/inventory-server"
+import { InventoryManagement } from "@/components/inventory/inventory-management"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export const metadata: Metadata = {
   title: "Magazyn - HVAC CRM ERP",
@@ -34,9 +38,38 @@ export default function InventoryPage() {
             </Button>
           </div>
         </div>
-        <div className="space-y-4">
-          <InventoryServer />
-        </div>
+        <Tabs defaultValue="classic" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="classic">Klasyczny widok</TabsTrigger>
+            <TabsTrigger value="advanced">Zaawansowany widok</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="classic" className="space-y-4">
+            <InventoryServer />
+          </TabsContent>
+
+          <TabsContent value="advanced" className="space-y-4">
+            <Suspense
+              fallback={
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-10 w-64" />
+                    <Skeleton className="h-10 w-32" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-10 w-64" />
+                    <Skeleton className="h-10 w-32" />
+                    <Skeleton className="h-10 w-32" />
+                  </div>
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-96 w-full" />
+                </div>
+              }
+            >
+              <InventoryManagement />
+            </Suspense>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )
