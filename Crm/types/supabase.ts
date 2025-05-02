@@ -6,1126 +6,1335 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
-      customers: {
+      addresses: {
         Row: {
+          address_type: string | null
+          city: string | null
+          created_at: string | null
+          customer_id: string | null
+          district: string | null
           id: string
-          created_at: string
-          updated_at: string
-          name: string
-          email: string
-          phone: string
-          address: string
-          city: string
-          postal_code: string
-          notes: string | null
-          status: string
-          type: string
-          tax_id: string | null
-          website: string | null
-          industry: string | null
-          payment_terms: string | null
-          credit_limit: number | null
-          company_size: number | null
-          annual_revenue: number | null
-          customer_since: string | null
-          referral_source: string | null
-          social_media_links: Json | null
-          logo_url: string | null
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          name: string
-          email: string
-          phone: string
-          address: string
-          city: string
-          postal_code: string
-          notes?: string | null
-          status?: string
-          type?: string
-          tax_id?: string | null
-          website?: string | null
-          industry?: string | null
-          payment_terms?: string | null
-          credit_limit?: number | null
-          company_size?: number | null
-          annual_revenue?: number | null
-          customer_since?: string | null
-          referral_source?: string | null
-          social_media_links?: Json | null
-          logo_url?: string | null
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          name?: string
-          email?: string
-          phone?: string
-          address?: string
-          city?: string
-          postal_code?: string
-          notes?: string | null
-          status?: string
-          type?: string
-          tax_id?: string | null
-          website?: string | null
-          industry?: string | null
-          payment_terms?: string | null
-          credit_limit?: number | null
-          company_size?: number | null
-          annual_revenue?: number | null
-          customer_since?: string | null
-          referral_source?: string | null
-          social_media_links?: Json | null
-          logo_url?: string | null
-        }
-        Relationships: []
-      }
-      sites: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          name: string
-          street: string
-          city: string
-          zip_code: string
-          customer_id: string
-          type: string
-          status: string
           latitude: number | null
           longitude: number | null
-          notes: string | null
+          street: string | null
+          updated_at: string | null
+          zip_code: string | null
         }
         Insert: {
+          address_type?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          district?: string | null
           id?: string
-          created_at?: string
-          updated_at?: string
-          name: string
-          street: string
-          city: string
-          zip_code: string
-          customer_id: string
-          type?: string
-          status?: string
           latitude?: number | null
           longitude?: number | null
-          notes?: string | null
+          street?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
         }
         Update: {
+          address_type?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          district?: string | null
           id?: string
-          created_at?: string
-          updated_at?: string
-          name?: string
-          street?: string
-          city?: string
-          zip_code?: string
-          customer_id?: string
-          type?: string
-          status?: string
           latitude?: number | null
           longitude?: number | null
-          notes?: string | null
+          street?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "sites_customer_id_fkey"
+            foreignKeyName: "addresses_customer_id_fkey"
             columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
-          }
+          },
         ]
+      }
+      calendar_attendees: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          email: string | null
+          event_id: string | null
+          id: string
+          name: string | null
+          role: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          email?: string | null
+          event_id?: string | null
+          id?: string
+          name?: string | null
+          role?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          email?: string | null
+          event_id?: string | null
+          id?: string
+          name?: string | null
+          role?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_attendees_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_attendees_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_events: {
+        Row: {
+          all_day: boolean | null
+          calendar_id: string | null
+          created_at: string | null
+          customer_id: string | null
+          description: string | null
+          end_time: string | null
+          id: string
+          location: string | null
+          organizer: string | null
+          recurrence_rule: string | null
+          sequence: number | null
+          start_time: string | null
+          status: string | null
+          summary: string | null
+          transparency: string | null
+          uid: string | null
+          updated_at: string | null
+          url: string | null
+        }
+        Insert: {
+          all_day?: boolean | null
+          calendar_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          organizer?: string | null
+          recurrence_rule?: string | null
+          sequence?: number | null
+          start_time?: string | null
+          status?: string | null
+          summary?: string | null
+          transparency?: string | null
+          uid?: string | null
+          updated_at?: string | null
+          url?: string | null
+        }
+        Update: {
+          all_day?: boolean | null
+          calendar_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          organizer?: string | null
+          recurrence_rule?: string | null
+          sequence?: number | null
+          start_time?: string | null
+          status?: string | null
+          summary?: string | null
+          transparency?: string | null
+          uid?: string | null
+          updated_at?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_calendar_id_fkey"
+            columns: ["calendar_id"]
+            isOneToOne: false
+            referencedRelation: "calendars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_reminders: {
+        Row: {
+          created_at: string | null
+          event_id: string | null
+          id: string
+          method: string | null
+          reminder_time: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          method?: string | null
+          reminder_time?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          method?: string | null
+          reminder_time?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_reminders_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendars: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_visible: boolean | null
+          name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_visible?: boolean | null
+          name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_visible?: boolean | null
+          name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string | null
+          platform: string | null
+          recipient: string | null
+          sender: string | null
+          timestamp: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          platform?: string | null
+          recipient?: string | null
+          sender?: string | null
+          timestamp?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          platform?: string | null
+          recipient?: string | null
+          sender?: string | null
+          timestamp?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string | null
+          nip: string | null
+          phone: string | null
+          updated_at: string | null
+          wealth_assessment: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          nip?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          wealth_assessment?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          nip?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          wealth_assessment?: number | null
+        }
+        Relationships: []
       }
       devices: {
         Row: {
+          created_at: string | null
           id: string
-          created_at: string
-          updated_at: string
-          model: string
-          serial_number: string
           installation_date: string | null
+          model: string | null
+          serial_number: string | null
+          site_id: string | null
+          type: string | null
+          updated_at: string | null
           warranty_expiry: string | null
-          site_id: string
-          type: string
         }
         Insert: {
+          created_at?: string | null
           id?: string
-          created_at?: string
-          updated_at?: string
-          model: string
-          serial_number: string
           installation_date?: string | null
+          model?: string | null
+          serial_number?: string | null
+          site_id?: string | null
+          type?: string | null
+          updated_at?: string | null
           warranty_expiry?: string | null
-          site_id: string
-          type?: string
         }
         Update: {
+          created_at?: string | null
           id?: string
-          created_at?: string
-          updated_at?: string
-          model?: string
-          serial_number?: string
           installation_date?: string | null
+          model?: string | null
+          serial_number?: string | null
+          site_id?: string | null
+          type?: string | null
+          updated_at?: string | null
           warranty_expiry?: string | null
-          site_id?: string
-          type?: string
         }
         Relationships: [
           {
             foreignKeyName: "devices_site_id_fkey"
             columns: ["site_id"]
+            isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
-          }
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          document_type: string | null
+          file_path: string | null
+          id: string
+          service_order_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          document_type?: string | null
+          file_path?: string | null
+          id?: string
+          service_order_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          document_type?: string | null
+          file_path?: string | null
+          id?: string
+          service_order_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      emails: {
+        Row: {
+          body: string | null
+          category: string | null
+          created_at: string | null
+          customer_id: string | null
+          id: string
+          sent_at: string | null
+          subject: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          body?: string | null
+          category?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          sent_at?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          body?: string | null
+          category?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          sent_at?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emails_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_submissions: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string | null
+          description: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          service_type: string | null
+          voice_note_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          service_type?: string | null
+          voice_note_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          service_type?: string | null
+          voice_note_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_voice_note_id_fkey"
+            columns: ["voice_note_id"]
+            isOneToOne: false
+            referencedRelation: "voice_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interactions: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          date: string | null
+          id: string
+          interaction_type: string | null
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          date?: string | null
+          id?: string
+          interaction_type?: string | null
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          date?: string | null
+          id?: string
+          interaction_type?: string | null
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          item_name: string | null
+          location: string | null
+          quantity: number | null
+          reorder_level: number | null
+          supplier_id: string | null
+          unit: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          item_name?: string | null
+          location?: string | null
+          quantity?: number | null
+          reorder_level?: number | null
+          supplier_id?: string | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          item_name?: string | null
+          location?: string | null
+          quantity?: number | null
+          reorder_level?: number | null
+          supplier_id?: string | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string | null
+          phone: string | null
+          source: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      ocr_results: {
+        Row: {
+          created_at: string | null
+          document_id: string | null
+          extracted_text: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_id?: string | null
+          extracted_text?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_id?: string | null
+          extracted_text?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocr_results_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          document_type: string | null
+          id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          margin: number | null
+          markup: number | null
+          product_index: string | null
+          profit: number | null
+          quantity: number | null
+          sales_value: number | null
+          total_cost: number | null
+          unit: string | null
+          updated_at: string | null
+          warehouse: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          document_type?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          margin?: number | null
+          markup?: number | null
+          product_index?: string | null
+          profit?: number | null
+          quantity?: number | null
+          sales_value?: number | null
+          total_cost?: number | null
+          unit?: string | null
+          updated_at?: string | null
+          warehouse?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          document_type?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          margin?: number | null
+          markup?: number | null
+          product_index?: string | null
+          profit?: number | null
+          quantity?: number | null
+          sales_value?: number | null
+          total_cost?: number | null
+          unit?: string | null
+          updated_at?: string | null
+          warehouse?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       service_orders: {
         Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          title: string
-          description: string
-          status: string
-          priority: string
-          type: string
-          scheduled_date: string | null
-          completed_date: string | null
-          estimated_duration: number | null
-          customer_id: string
-          site_id: string
+          cost: number | null
+          created_at: string | null
+          customer_id: string | null
           device_id: string | null
+          id: string
+          payment_status: string | null
+          scheduled_end: string | null
+          scheduled_start: string | null
+          service_type: string | null
+          site_id: string | null
+          status: string | null
           technician_id: string | null
-          notes: string | null
+          updated_at: string | null
         }
         Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          title: string
-          description: string
-          status?: string
-          priority?: string
-          type?: string
-          scheduled_date?: string | null
-          completed_date?: string | null
-          estimated_duration?: number | null
-          customer_id: string
-          site_id: string
+          cost?: number | null
+          created_at?: string | null
+          customer_id?: string | null
           device_id?: string | null
+          id?: string
+          payment_status?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          service_type?: string | null
+          site_id?: string | null
+          status?: string | null
           technician_id?: string | null
-          notes?: string | null
+          updated_at?: string | null
         }
         Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          title?: string
-          description?: string
-          status?: string
-          priority?: string
-          type?: string
-          scheduled_date?: string | null
-          completed_date?: string | null
-          estimated_duration?: number | null
-          customer_id?: string
-          site_id?: string
+          cost?: number | null
+          created_at?: string | null
+          customer_id?: string | null
           device_id?: string | null
+          id?: string
+          payment_status?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          service_type?: string | null
+          site_id?: string | null
+          status?: string | null
           technician_id?: string | null
-          notes?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "service_orders_customer_id_fkey"
             columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_orders_site_id_fkey"
-            columns: ["site_id"]
-            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "service_orders_device_id_fkey"
             columns: ["device_id"]
+            isOneToOne: false
             referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_orders_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "service_orders_technician_id_fkey"
             columns: ["technician_id"]
+            isOneToOne: false
             referencedRelation: "technicians"
             referencedColumns: ["id"]
-          }
+          },
         ]
+      }
+      sites: {
+        Row: {
+          city: string | null
+          created_at: string | null
+          customer_id: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string | null
+          street: string | null
+          updated_at: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          street?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          street?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sites_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_gateway: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string | null
+          recipient: string | null
+          sent_at: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          recipient?: string | null
+          sent_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          recipient?: string | null
+          sent_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      suppliers: {
+        Row: {
+          contact_info: string | null
+          created_at: string | null
+          id: string
+          name: string | null
+          prices: Json | null
+          products: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contact_info?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          prices?: Json | null
+          products?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contact_info?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          prices?: Json | null
+          products?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       technicians: {
         Row: {
+          created_at: string | null
+          email: string | null
           id: string
-          created_at: string
-          updated_at: string
-          name: string
-          email: string
-          phone: string
-          specialization: string | null
-          status: string
-          notes: string | null
-          certification: string | null
-          hire_date: string | null
-          emergency_contact: string | null
-          hourly_rate: number | null
-          avatar_url: string | null
+          name: string | null
+          phone: string | null
+          updated_at: string | null
         }
         Insert: {
+          created_at?: string | null
+          email?: string | null
           id?: string
-          created_at?: string
-          updated_at?: string
-          name: string
-          email: string
-          phone: string
-          specialization?: string | null
-          status?: string
-          notes?: string | null
-          certification?: string | null
-          hire_date?: string | null
-          emergency_contact?: string | null
-          hourly_rate?: number | null
-          avatar_url?: string | null
+          name?: string | null
+          phone?: string | null
+          updated_at?: string | null
         }
         Update: {
+          created_at?: string | null
+          email?: string | null
           id?: string
-          created_at?: string
-          updated_at?: string
-          name?: string
-          email?: string
-          phone?: string
-          specialization?: string | null
-          status?: string
-          notes?: string | null
-          certification?: string | null
-          hire_date?: string | null
-          emergency_contact?: string | null
-          hourly_rate?: number | null
-          avatar_url?: string | null
+          name?: string | null
+          phone?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
-      inventory_items: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          name: string
-          description: string | null
-          category: string
-          manufacturer: string | null
-          model: string | null
-          sku: string | null
-          quantity: number
-          unit_price: number | null
-          location: string | null
-          min_quantity: number | null
-          notes: string | null
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          name: string
-          description?: string | null
-          category: string
-          manufacturer?: string | null
-          model?: string | null
-          sku?: string | null
-          quantity: number
-          unit_price?: number | null
-          location?: string | null
-          min_quantity?: number | null
-          notes?: string | null
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          name?: string
-          description?: string | null
-          category?: string
-          manufacturer?: string | null
-          model?: string | null
-          sku?: string | null
-          quantity?: number
-          unit_price?: number | null
-          location?: string | null
-          min_quantity?: number | null
-          notes?: string | null
-        }
-        Relationships: []
-      }
-      service_reports: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          service_order_id: string
-          technician_id: string
-          report_date: string
-          work_performed: string
-          parts_used: Json | null
-          labor_hours: number
-          status: string
-          customer_signature: boolean
-          notes: string | null
-          recommendations: string | null
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          service_order_id: string
-          technician_id: string
-          report_date: string
-          work_performed: string
-          parts_used?: Json | null
-          labor_hours: number
-          status?: string
-          customer_signature?: boolean
-          notes?: string | null
-          recommendations?: string | null
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          service_order_id?: string
-          technician_id?: string
-          report_date?: string
-          work_performed?: string
-          parts_used?: Json | null
-          labor_hours?: number
-          status?: string
-          customer_signature?: boolean
-          notes?: string | null
-          recommendations?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "service_reports_service_order_id_fkey"
-            columns: ["service_order_id"]
-            referencedRelation: "service_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_reports_technician_id_fkey"
-            columns: ["technician_id"]
-            referencedRelation: "technicians"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      device_telemetry: {
-        Row: {
-          id: string
-          created_at: string
-          device_id: string
-          temperature: number | null
-          humidity: number | null
-          pressure: number | null
-          airflow: number | null
-          energy_consumption: number | null
-          status: string
-          alert: boolean
-          alert_message: string | null
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          device_id: string
-          temperature?: number | null
-          humidity?: number | null
-          pressure?: number | null
-          airflow?: number | null
-          energy_consumption?: number | null
-          status?: string
-          alert?: boolean
-          alert_message?: string | null
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          device_id?: string
-          temperature?: number | null
-          humidity?: number | null
-          pressure?: number | null
-          airflow?: number | null
-          energy_consumption?: number | null
-          status?: string
-          alert?: boolean
-          alert_message?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "device_telemetry_device_id_fkey"
-            columns: ["device_id"]
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      notifications: {
-        Row: {
-          id: string
-          created_at: string
-          user_id: string | null
-          title: string
-          message: string
-          type: string
-          is_read: boolean
-          source: string
-          link: string | null
-          is_starred: boolean
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          user_id?: string | null
-          title: string
-          message: string
-          type?: string
-          is_read?: boolean
-          source: string
-          link?: string | null
-          is_starred?: boolean
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          user_id?: string | null
-          title?: string
-          message?: string
-          type?: string
-          is_read?: boolean
-          source?: string
-          link?: string | null
-          is_starred?: boolean
-        }
-        Relationships: []
-      }
-      customer_contacts: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          customer_id: string
-          name: string
-          position: string | null
-          email: string
-          phone: string
-          is_primary: boolean
-          notes: string | null
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          customer_id: string
-          name: string
-          position?: string | null
-          email: string
-          phone: string
-          is_primary?: boolean
-          notes?: string | null
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          customer_id?: string
-          name?: string
-          position?: string | null
-          email?: string
-          phone?: string
-          is_primary?: boolean
-          notes?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_contacts_customer_id_fkey"
-            columns: ["customer_id"]
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      maintenance_schedules: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          device_id: string
-          frequency: string
-          last_maintenance_date: string | null
-          next_maintenance_date: string
-          description: string
-          technician_id: string | null
-          status: string
-          notes: string | null
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          device_id: string
-          frequency: string
-          last_maintenance_date?: string | null
-          next_maintenance_date: string
-          description: string
-          technician_id?: string | null
-          status?: string
-          notes?: string | null
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          device_id?: string
-          frequency?: string
-          last_maintenance_date?: string | null
-          next_maintenance_date?: string
-          description?: string
-          technician_id?: string | null
-          status?: string
-          notes?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "maintenance_schedules_device_id_fkey"
-            columns: ["device_id"]
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "maintenance_schedules_technician_id_fkey"
-            columns: ["technician_id"]
-            referencedRelation: "technicians"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      inventory_transactions: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          inventory_item_id: string
-          quantity: number
-          transaction_type: string
-          reference_id: string | null
-          reference_type: string | null
-          notes: string | null
-          performed_by: string | null
-          unit_price: number | null
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          inventory_item_id: string
-          quantity: number
-          transaction_type: string
-          reference_id?: string | null
-          reference_type?: string | null
-          notes?: string | null
-          performed_by?: string | null
-          unit_price?: number | null
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          inventory_item_id?: string
-          quantity?: number
-          transaction_type?: string
-          reference_id?: string | null
-          reference_type?: string | null
-          notes?: string | null
-          performed_by?: string | null
-          unit_price?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_transactions_inventory_item_id_fkey"
-            columns: ["inventory_item_id"]
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      device_documents: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          device_id: string
-          name: string
-          description: string | null
-          file_url: string
-          file_type: string
-          file_size: number | null
-          uploaded_by: string | null
-          document_type: string
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          device_id: string
-          name: string
-          description?: string | null
-          file_url: string
-          file_type: string
-          file_size?: number | null
-          uploaded_by?: string | null
-          document_type: string
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          device_id?: string
-          name?: string
-          description?: string | null
-          file_url?: string
-          file_type?: string
-          file_size?: number | null
-          uploaded_by?: string | null
-          document_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "device_documents_device_id_fkey"
-            columns: ["device_id"]
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      invoices: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          invoice_number: string
-          customer_id: string
-          service_order_id: string | null
-          issue_date: string
-          due_date: string
-          amount: number
-          tax_amount: number
-          total_amount: number
-          status: string
-          notes: string | null
-          payment_date: string | null
-          payment_method: string | null
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          invoice_number: string
-          customer_id: string
-          service_order_id?: string | null
-          issue_date: string
-          due_date: string
-          amount: number
-          tax_amount: number
-          total_amount: number
-          status?: string
-          notes?: string | null
-          payment_date?: string | null
-          payment_method?: string | null
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          invoice_number?: string
-          customer_id?: string
-          service_order_id?: string | null
-          issue_date?: string
-          due_date?: string
-          amount?: number
-          tax_amount?: number
-          total_amount?: number
-          status?: string
-          notes?: string | null
-          payment_date?: string | null
-          payment_method?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoices_customer_id_fkey"
-            columns: ["customer_id"]
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_service_order_id_fkey"
-            columns: ["service_order_id"]
-            referencedRelation: "service_orders"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      warranty_claims: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          device_id: string
-          customer_id: string
-          claim_date: string
-          description: string
-          status: string
-          resolution: string | null
-          resolution_date: string | null
-          manufacturer_claim_number: string | null
-          notes: string | null
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          device_id: string
-          customer_id: string
-          claim_date: string
-          description: string
-          status?: string
-          resolution?: string | null
-          resolution_date?: string | null
-          manufacturer_claim_number?: string | null
-          notes?: string | null
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          device_id?: string
-          customer_id?: string
-          claim_date?: string
-          description?: string
-          status?: string
-          resolution?: string | null
-          resolution_date?: string | null
-          manufacturer_claim_number?: string | null
-          notes?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "warranty_claims_device_id_fkey"
-            columns: ["device_id"]
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "warranty_claims_customer_id_fkey"
-            columns: ["customer_id"]
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      technician_schedules: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          technician_id: string
-          service_order_id: string | null
-          start_time: string
-          end_time: string
-          status: string
-          notes: string | null
-          schedule_type: string
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          technician_id: string
-          service_order_id?: string | null
-          start_time: string
-          end_time: string
-          status?: string
-          notes?: string | null
-          schedule_type: string
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          technician_id?: string
-          service_order_id?: string | null
-          start_time?: string
-          end_time?: string
-          status?: string
-          notes?: string | null
-          schedule_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "technician_schedules_technician_id_fkey"
-            columns: ["technician_id"]
-            referencedRelation: "technicians"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "technician_schedules_service_order_id_fkey"
-            columns: ["service_order_id"]
-            referencedRelation: "service_orders"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      device_parts: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          device_id: string
-          inventory_item_id: string
-          quantity_required: number
-          position: string | null
-          is_critical: boolean
-          notes: string | null
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          device_id: string
-          inventory_item_id: string
-          quantity_required: number
-          position?: string | null
-          is_critical?: boolean
-          notes?: string | null
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          device_id?: string
-          inventory_item_id?: string
-          quantity_required?: number
-          position?: string | null
-          is_critical?: boolean
-          notes?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "device_parts_device_id_fkey"
-            columns: ["device_id"]
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "device_parts_inventory_item_id_fkey"
-            columns: ["inventory_item_id"]
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      customer_notes: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          customer_id: string
-          created_by: string | null
-          content: string
-          note_type: string
-          is_pinned: boolean
-          is_private: boolean
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          customer_id: string
-          created_by?: string | null
-          content: string
-          note_type?: string
-          is_pinned?: boolean
-          is_private?: boolean
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          customer_id?: string
-          created_by?: string | null
-          content?: string
-          note_type?: string
-          is_pinned?: boolean
-          is_private?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_notes_customer_id_fkey"
-            columns: ["customer_id"]
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      customer_files: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          customer_id: string
-          name: string
-          description: string | null
-          file_url: string
-          file_type: string
-          file_size: number | null
-          uploaded_by: string | null
-          file_category: string
-          is_private: boolean
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          customer_id: string
-          name: string
-          description?: string | null
-          file_url: string
-          file_type: string
-          file_size?: number | null
-          uploaded_by?: string | null
-          file_category?: string
-          is_private?: boolean
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          customer_id?: string
-          name?: string
-          description?: string | null
-          file_url?: string
-          file_type?: string
-          file_size?: number | null
-          uploaded_by?: string | null
-          file_category?: string
-          is_private?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_files_customer_id_fkey"
-            columns: ["customer_id"]
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          }
-        ]
-      },
       tickets: {
         Row: {
-          id: string
-          title: string
-          description: string | null
-          status: string
-          priority: string
-          type: string
-          customer_id: string
-          site_id: string
-          device_id: string | null
-          technician_id: string | null
-          created_at: string
-          updated_at: string
-          scheduled_date: string | null
           completed_date: string | null
+          created_at: string | null
+          customer_id: string | null
+          description: string | null
+          device_id: string | null
           estimated_duration: number | null
+          id: string
           notes: string | null
+          priority: string
+          scheduled_date: string | null
+          site_id: string | null
+          status: string
+          technician_id: string | null
+          title: string
+          type: string
+          updated_at: string | null
         }
         Insert: {
-          id?: string
-          title: string
-          description?: string | null
-          status?: string
-          priority?: string
-          type?: string
-          customer_id: string
-          site_id: string
-          device_id?: string | null
-          technician_id?: string | null
-          created_at?: string
-          updated_at?: string
-          scheduled_date?: string | null
           completed_date?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          description?: string | null
+          device_id?: string | null
           estimated_duration?: number | null
+          id?: string
           notes?: string | null
+          priority?: string
+          scheduled_date?: string | null
+          site_id?: string | null
+          status?: string
+          technician_id?: string | null
+          title: string
+          type?: string
+          updated_at?: string | null
         }
         Update: {
-          id?: string
-          title?: string
-          description?: string | null
-          status?: string
-          priority?: string
-          type?: string
-          customer_id?: string
-          site_id?: string
-          device_id?: string | null
-          technician_id?: string | null
-          created_at?: string
-          updated_at?: string
-          scheduled_date?: string | null
           completed_date?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          description?: string | null
+          device_id?: string | null
           estimated_duration?: number | null
+          id?: string
           notes?: string | null
+          priority?: string
+          scheduled_date?: string | null
+          site_id?: string | null
+          status?: string
+          technician_id?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "tickets_customer_id_fkey"
             columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tickets_site_id_fkey"
-            columns: ["site_id"]
-            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "tickets_device_id_fkey"
             columns: ["device_id"]
+            isOneToOne: false
             referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "tickets_technician_id_fkey"
             columns: ["technician_id"]
+            isOneToOne: false
             referencedRelation: "technicians"
             referencedColumns: ["id"]
-          }
+          },
+        ]
+      }
+      transcriptions: {
+        Row: {
+          created_at: string | null
+          id: string
+          interaction_id: string | null
+          transcript: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          interaction_id?: string | null
+          transcript?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          interaction_id?: string | null
+          transcript?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcriptions_interaction_id_fkey"
+            columns: ["interaction_id"]
+            isOneToOne: false
+            referencedRelation: "interactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visualizations: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          site_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          site_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          site_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visualizations_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_notes: {
+        Row: {
+          audio_data: string | null
+          created_at: string | null
+          id: string
+          transcription: string | null
+        }
+        Insert: {
+          audio_data?: string | null
+          created_at?: string | null
+          id?: string
+          transcription?: string | null
+        }
+        Update: {
+          audio_data?: string | null
+          created_at?: string | null
+          id?: string
+          transcription?: string | null
+        }
+        Relationships: []
+      }
+      warranties: {
+        Row: {
+          created_at: string | null
+          details: string | null
+          device_id: string | null
+          expiry_date: string | null
+          id: string
+          issue_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: string | null
+          device_id?: string | null
+          expiry_date?: string | null
+          id?: string
+          issue_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: string | null
+          device_id?: string | null
+          expiry_date?: string | null
+          id?: string
+          issue_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warranties_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      hypopg_hidden_indexes: {
+        Row: {
+          am_name: unknown | null
+          index_name: unknown | null
+          indexrelid: unknown | null
+          is_hypo: boolean | null
+          schema_name: unknown | null
+          table_name: unknown | null
+        }
+        Relationships: []
+      }
+      hypopg_list_indexes: {
+        Row: {
+          am_name: unknown | null
+          index_name: string | null
+          indexrelid: unknown | null
+          schema_name: unknown | null
+          table_name: unknown | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hypopg: {
+        Args: Record<PropertyKey, never>
+        Returns: Record<string, unknown>[]
+      }
+      hypopg_create_index: {
+        Args: { sql_order: string }
+        Returns: Record<string, unknown>[]
+      }
+      hypopg_drop_index: {
+        Args: { indexid: unknown }
+        Returns: boolean
+      }
+      hypopg_get_indexdef: {
+        Args: { indexid: unknown }
+        Returns: string
+      }
+      hypopg_hidden_indexes: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          indexid: unknown
+        }[]
+      }
+      hypopg_hide_index: {
+        Args: { indexid: unknown }
+        Returns: boolean
+      }
+      hypopg_relation_size: {
+        Args: { indexid: unknown }
+        Returns: number
+      }
+      hypopg_reset: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      hypopg_reset_index: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      hypopg_unhide_all_indexes: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      hypopg_unhide_index: {
+        Args: { indexid: unknown }
+        Returns: boolean
+      }
+      index_advisor: {
+        Args: { query: string }
+        Returns: {
+          startup_cost_before: Json
+          startup_cost_after: Json
+          total_cost_before: Json
+          total_cost_after: Json
+          index_statements: string[]
+          errors: string[]
+        }[]
+      }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: string
+      }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
@@ -1135,3 +1344,114 @@ export interface Database {
     }
   }
 }
+
+type DefaultSchema = Database[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof Database },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

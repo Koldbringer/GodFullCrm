@@ -47,9 +47,12 @@ export async function getCustomers({
   sortOrder?: 'asc' | 'desc';
 } = {}) {
   console.log("Wywołanie getCustomers z parametrami:", { filter, status, type, limit, offset, sortBy, sortOrder });
+  // Select only necessary columns for performance. Adjust if more columns are needed.
+  // Using count: 'estimated' for potentially better performance on large tables.
+  // Change to 'exact' if precise count is strictly required, but be aware of potential performance impact.
   let query = supabase
     .from('customers')
-    .select('*', { count: 'exact' }) as any;
+    .select('id, name', { count: 'estimated' }) as any;
 
   if (filter) query = query.ilike('name', `%${filter}%`);
   if (status) query = query.eq('status', status);
@@ -65,18 +68,19 @@ export async function getCustomers({
     console.error('Error fetching customers:', error);
     return { data: [], count: 0 };
   }
-  return {  count };
+  // Note: 'data' now only contains 'id' and 'name'.
+  return { data, count };
 }
 
 export async function getCustomerById(id: string, includeRelated: boolean = false) {
   const query = includeRelated
     ? supabase.from('customers').select(`
       *,
-      sites(id, name, street, city, zip_code, type, status),
-      customer_contacts(id, name, position, email, phone, is_primary),
-      service_orders(id, title, status, scheduled_date, priority),
-      invoices(id, invoice_number, issue_date, due_date, total_amount, status),
-      warranty_claims(id, device_id, claim_date, status, devices(name, model))
+      sites:sites(id, name, city, status),
+      customer_contacts:customer_contacts(id, name, is_primary, phone, email),
+      service_orders:service_orders(id, title, status, priority, scheduled_date),
+      invoices:invoices(id, invoice_number, due_date, total_amount, status),
+      warranty_claims:warranty_claims(id, claim_date, status, devices(name))
     `)
     : supabase.from('customers').select('*');
 
@@ -120,9 +124,10 @@ export async function updateCustomer(id: string, customer: Database['public']['T
 
 // Funkcje dla lokalizacji
 export async function getSites() {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('sites')
-    .select('*, customers(name, email, phone)')
+    .select('id, name, city, status, customer_id, customers(name)') // Adjusted columns
     .order('name')
 
   if (error) {
@@ -134,9 +139,10 @@ export async function getSites() {
 }
 
 export async function getSiteById(id: string) {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('sites')
-    .select('*, customers(name, email, phone)')
+    .select('id, name, street, city, zip_code, type, status, customer_id, customers(name)') // Adjusted columns
     .eq('id', id)
     .single()
 
@@ -149,12 +155,13 @@ export async function getSiteById(id: string) {
 }
 
 export async function getSitesByCustomerId(customerId: string, includeDevices: boolean = false) {
+  // Select only necessary columns for performance
   const query = includeDevices
     ? supabase.from('sites').select(`
-      *,
-      devices(id, name, model, serial_number, type, status)
+      id, name, city, status, customer_id,
+      devices:devices(id, name, model, type, status)
     `)
-    : supabase.from('sites').select('*');
+    : supabase.from('sites').select('id, name, city, status, customer_id');
 
   const { data, error } = await query
     .eq('customer_id', customerId)
@@ -199,9 +206,10 @@ export async function updateSite(id: string, site: Database['public']['Tables'][
 
 // Funkcje dla urządzeń
 export async function getDevices() {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('devices')
-    .select('*, sites(name, street)')
+    .select('id, name, model, type, status, site_id, sites(name)') // Adjusted columns
     .order('model')
 
   if (error) {
@@ -213,9 +221,10 @@ export async function getDevices() {
 }
 
 export async function getDeviceById(id: string) {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('devices')
-    .select('*, sites(name, street, customer_id, customers(name))')
+    .select('id, name, model, serial_number, type, status, installation_date, last_maintenance_date, site_id, sites(name, customer_id, customers(name))') // Adjusted columns
     .eq('id', id)
     .single()
 
@@ -228,11 +237,12 @@ export async function getDeviceById(id: string) {
 }
 
 export async function getDevicesBySiteId(siteId: string) {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('devices')
-    .select('*')
+    .select('id, name, model, type, status, installation_date') // Adjusted columns
     .eq('site_id', siteId)
-    .order('name')
+    .order('model')
 
   if (error) {
     console.error(`Error fetching devices for site ${siteId}:`, error)
@@ -273,16 +283,16 @@ export async function updateDevice(id: string, device: Database['public']['Table
 
 // Funkcje dla zleceń serwisowych
 export async function getServiceOrders() {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('service_orders')
     .select(`
-      *,
+      id, title, status, priority, scheduled_start, service_type, customer_id, site_id, technician_id,
       customers(name),
-      sites(name, street),
-      devices(type, model),
+      sites(name),
       technicians(name)
     `)
-    .order('created_at', { ascending: false })
+    .order('scheduled_start', { ascending: false })
 
   if (error) {
     console.error('Error fetching service orders:', error)
@@ -293,14 +303,16 @@ export async function getServiceOrders() {
 }
 
 export async function getServiceOrderById(id: string) {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('service_orders')
     .select(`
-      *,
+      id, title, description, status, priority, scheduled_start, scheduled_end, completed_date, cost, payment_status, service_type, customer_id, site_id, device_id, technician_id,
       customers(name, email, phone),
       sites(name, street),
-      devices(type, model, serial_number),
-      technicians(name, email, phone)
+      devices(name, model, serial_number),
+      technicians(name, email, phone),
+      service_reports(id, created_at, summary)
     `)
     .eq('id', id)
     .single()
@@ -344,9 +356,10 @@ export async function updateServiceOrder(id: string, order: Database['public']['
 
 // Funkcje dla techników
 export async function getTechnicians() {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('technicians')
-    .select('*')
+    .select('id, name, email, phone, specialization, status') // Adjusted columns
     .order('name')
 
   if (error) {
@@ -358,9 +371,10 @@ export async function getTechnicians() {
 }
 
 export async function getTechnicianById(id: string) {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('technicians')
-    .select('*')
+    .select('id, name, email, phone, specialization, status, hire_date') // Adjusted columns
     .eq('id', id)
     .single()
 
@@ -374,9 +388,10 @@ export async function getTechnicianById(id: string) {
 
 // Funkcje dla magazynu
 export async function getInventoryItems() {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('inventory_items')
-    .select('*')
+    .select('id, name, category, quantity, unit_price, location, status') // Adjusted columns
     .order('name')
 
   if (error) {
@@ -388,9 +403,10 @@ export async function getInventoryItems() {
 }
 
 export async function getInventoryItemById(id: string) {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('inventory_items')
-    .select('*')
+    .select('id, name, description, category, quantity, unit_price, location, status, supplier, sku') // Adjusted columns
     .eq('id', id)
     .single()
 
@@ -404,10 +420,11 @@ export async function getInventoryItemById(id: string) {
 
 // Funkcje dla raportów serwisowych
 export async function getServiceReports() {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('service_reports')
     .select(`
-      *,
+      id, report_date, summary, service_order_id, technician_id,
       service_orders(title, customer_id, site_id, customers(name), sites(name)),
       technicians(name)
     `)
@@ -422,12 +439,13 @@ export async function getServiceReports() {
 }
 
 export async function getServiceReportById(id: string) {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('service_reports')
     .select(`
-      *,
-      service_orders(title, description, customer_id, site_id, device_id, customers(name), sites(name), devices(name, model)),
-      technicians(name, email, phone)
+      id, report_date, summary, work_description, parts_used, service_order_id, technician_id,
+      service_orders(title, customers(name), sites(name), devices(name, model)),
+      technicians(name)
     `)
     .eq('id', id)
     .single()
@@ -456,9 +474,10 @@ export async function createServiceReport(report: Database['public']['Tables']['
 
 // Funkcje dla telemetrii urządzeń
 export async function getDeviceTelemetry(deviceId: string, limit = 100) {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('device_telemetry')
-    .select('*')
+    .select('id, created_at, device_id, metric_name, metric_value') // Adjusted columns
     .eq('device_id', deviceId)
     .order('created_at', { ascending: false })
     .limit(limit)
@@ -472,9 +491,10 @@ export async function getDeviceTelemetry(deviceId: string, limit = 100) {
 }
 
 export async function getLatestDeviceTelemetry(deviceId: string) {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('device_telemetry')
-    .select('*')
+    .select('id, created_at, device_id, metric_name, metric_value') // Adjusted columns
     .eq('device_id', deviceId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -491,26 +511,17 @@ export async function getLatestDeviceTelemetry(deviceId: string) {
 // Funkcje dla mapy
 export async function getMapData() {
   // Pobierz lokalizacje klientów
+  // Select only necessary columns for performance
   const { data: sites, error: sitesError } = await supabase
     .from('sites')
     .select(`
       id,
       name,
-      street,
-      city,
-      zip_code,
-      type,
-      status,
       latitude,
       longitude,
-      customer_id,
-      customers (
-        id,
-        name,
-        email,
-        phone,
-        type
-      )
+      status,
+      type,
+      customers ( name )
     `)
     .not('latitude', 'is', null)
     .not('longitude', 'is', null)
@@ -521,47 +532,20 @@ export async function getMapData() {
   }
 
   // Pobierz zlecenia serwisowe
+  // Select only necessary columns for performance
   const { data: serviceOrders, error: ordersError } = await supabase
     .from('service_orders')
     .select(`
       id,
       title,
-      description,
       status,
       priority,
       scheduled_start,
-      scheduled_end,
-      customer_id,
+      service_type,
       site_id,
-      device_id,
       technician_id,
-      sites (
-        id,
-        name,
-        street,
-        city,
-        zip_code,
-        latitude,
-        longitude
-      ),
-      customers (
-        id,
-        name,
-        email,
-        phone
-      ),
-      technicians (
-        id,
-        name,
-        email,
-        phone
-      ),
-      devices (
-        id,
-        name,
-        model,
-        type
-      )
+      sites ( name, latitude, longitude ),
+      technicians ( name )
     `)
     .order('scheduled_start', { ascending: false })
     .limit(100)
@@ -572,9 +556,10 @@ export async function getMapData() {
   }
 
   // Pobierz techników
+  // Select only necessary columns for performance
   const { data: technicians, error: techniciansError } = await supabase
     .from('technicians')
-    .select('*')
+    .select('id, name') // Adjusted columns
 
   if (techniciansError) {
     console.error('Error fetching technicians for map:', techniciansError)
@@ -589,24 +574,17 @@ export async function getMapData() {
 }
 
 export async function getSitesWithCoordinates() {
+  // Select only necessary columns for performance
   const { data, error } = await supabase
     .from('sites')
     .select(`
       id,
       name,
-      street,
-      city,
-      zip_code,
-      type,
-      status,
       latitude,
       longitude,
-      customer_id,
-      customers (
-        id,
-        name,
-        type
-      )
+      status,
+      type,
+      customers ( name )
     `)
     .not('latitude', 'is', null)
     .not('longitude', 'is', null)

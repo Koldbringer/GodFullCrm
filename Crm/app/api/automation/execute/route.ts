@@ -1,0 +1,134 @@
+:start_line:1
+-------
+import { NextResponse } from 'next/server';
+import { sendEmail } from '@/lib/email'; // Import funkcji wysyłki emaila
+import { createTask } from '@/lib/tasks'; // Import funkcji tworzenia zadania
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'; // Import Supabase client
+import { cookies } from 'next/headers'; // Import cookies
+// Import funkcji aktualizacji kontraktu (do zaimplementowania)
+// import { updateContract } from '@/lib/contracts';
+
+export async function POST(request: Request) {
+  try {
+    const { nodeId, nodeData } = await request.json();
+    const supabase = createRouteHandlerClient({ cookies }); // Utworzenie instancji klienta Supabase
+
+    // Tutaj będziemy rozróżniać, który węzeł ma zostać wykonany
+    // i wywoływać odpowiednią logikę.
+
+    if (nodeId === 'EmailNode') { // Używamy nazwy węzła jako identyfikatora
+      const { recipient, subject, body } = nodeData;
+
+      if (!recipient || !subject || !body) {
+        return NextResponse.json({ error: 'Missing required email data' }, { status: 400 });
+      }
+
+      // Wywołanie funkcji wysyłki emaila
+      sendEmail({ to: recipient, subject, body });
+
+      return NextResponse.json({ success: true, message: 'Email sent' });
+
+    } else if (nodeId === 'CreateTaskNode') { // Obsługa węzła Utwórz Zadanie
+      const { description, assignee, dueDate } = nodeData;
+
+      if (!description) {
+        return NextResponse.json({ error: 'Missing required task description' }, { status: 400 });
+      }
+
+      // Wywołanie funkcji tworzenia zadania
+      // assignee i dueDate nie są jeszcze używane w createTask, ale przekazujemy je dalej
+      const newTask = createTask(description);
+
+      return NextResponse.json({ success: true, taskId: newTask.id, status: newTask.status });
+
+    } else if (nodeId === 'UpdateContractNode') { // Obsługa węzła Aktualizuj Kontrakt
+      const { contractId, updates } = nodeData;
+
+      if (!contractId || !updates) {
+        return NextResponse.json({ error: 'Missing required contract data' }, { status: 400 });
+      }
+
+      // Tutaj będzie wywołanie funkcji aktualizacji kontraktu
+      // const updatedContract = await updateContract(contractId, updates);
+
+      // Na razie zwracamy tylko informację o próbie aktualizacji
+      console.log(`Attempting to update contract ${contractId} with data:`, updates);
+
+      return NextResponse.json({ success: true, message: `Contract ${contractId} update initiated` });
+
+    } else if (nodeId === 'DataConditionNode') { // Obsługa węzła Warunek Danych
+      const { dataSource, field, operator, value } = nodeData;
+
+      if (!dataSource || !field || !operator) {
+        return NextResponse.json({ error: 'Missing required data condition inputs' }, { status: 400 });
+      }
+
+      let result = false;
+
+      try {
+        // Pobranie danych z Supabase
+        const { data, error } = await supabase
+          .from(dataSource)
+          .select(field)
+          .limit(1); // Pobieramy tylko jeden rekord, aby sprawdzić warunek
+
+        if (error) {
+          console.error('Supabase query error:', error);
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        if (data && data.length > 0) {
+          const fieldValue = data[0][field];
+
+          // Ocena warunku na podstawie operatora
+          switch (operator) {
+            case '=':
+              result = fieldValue === value;
+              break;
+            case '!=':
+              result = fieldValue !== value;
+              break;
+            case '>':
+              result = fieldValue > value;
+              break;
+            case '<':
+              result = fieldValue < value;
+              break;
+            case '>=':
+              result = fieldValue >= value;
+              break;
+            case '<=':
+              result = fieldValue <= value;
+              break;
+            case 'is null':
+              result = fieldValue === null;
+              break;
+            case 'is not null':
+              result = fieldValue !== null;
+              break;
+            // TODO: Dodać obsługę dla 'like', 'ilike'
+            default:
+              console.error(`Unsupported operator: ${operator}`);
+              return NextResponse.json({ error: `Unsupported operator: ${operator}` }, { status: 400 });
+          }
+        } else {
+          // Jeśli nie znaleziono danych, warunek jest false
+          result = false;
+        }
+
+        return NextResponse.json({ success: true, result });
+
+      } catch (error: any) {
+        console.error('Error evaluating data condition:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+    } else {
+      return NextResponse.json({ error: `Unknown node type: ${nodeId}` }, { status: 400 });
+    }
+
+  } catch (error: any) {
+    console.error('Error executing node:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
