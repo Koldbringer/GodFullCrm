@@ -5,8 +5,9 @@ import {
   getTemplatesByCategory, 
   createWorkflowFromTemplate 
 } from '@/lib/services/workflow-templates';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { SUPABASE_CONFIG } from '@/lib/supabase/config';
 
 export async function GET(request: Request) {
   try {
@@ -62,8 +63,25 @@ export async function POST(request: Request) {
     if (name) workflow.name = name;
     if (description) workflow.description = description;
     
-    // Save the workflow to the database
-    const supabase = createRouteHandlerClient({ cookies });
+    // Create Supabase client
+    const cookieStore = cookies();
+    const supabase = createServerClient(
+      SUPABASE_CONFIG.url,
+      SUPABASE_CONFIG.anonKey,
+      {
+        cookies: {
+          get(name) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name, value, options) {
+            cookieStore.set({ name, value, ...options });
+          },
+          remove(name, options) {
+            cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+          }
+        }
+      }
+    );
     
     const { data, error } = await supabase
       .from('automation_workflows')

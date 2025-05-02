@@ -1,5 +1,6 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { SUPABASE_CONFIG } from '@/lib/supabase/config';
 
 export interface AutomationNotification {
   id: string;
@@ -12,6 +13,28 @@ export interface AutomationNotification {
   read: boolean;
 }
 
+// Helper function to create a Supabase client
+const createClient = () => {
+  const cookieStore = cookies();
+  return createServerClient(
+    SUPABASE_CONFIG.url,
+    SUPABASE_CONFIG.anonKey,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name, value, options) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+        }
+      }
+    }
+  );
+};
+
 /**
  * Create a notification for an automation event
  */
@@ -23,7 +46,7 @@ export async function createAutomationNotification(
   status: 'info' | 'success' | 'warning' | 'error' = 'info'
 ): Promise<void> {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient();
     
     await supabase.from('automation_notifications').insert({
       workflow_id: workflowId,
@@ -47,7 +70,7 @@ export async function getAutomationNotifications(
   includeRead: boolean = false
 ): Promise<AutomationNotification[]> {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient();
     
     let query = supabase
       .from('automation_notifications')
@@ -78,7 +101,7 @@ export async function getAutomationNotifications(
  */
 export async function markNotificationAsRead(notificationId: string): Promise<boolean> {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient();
     
     const { error } = await supabase
       .from('automation_notifications')
@@ -102,7 +125,7 @@ export async function markNotificationAsRead(notificationId: string): Promise<bo
  */
 export async function markAllNotificationsAsRead(): Promise<boolean> {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient();
     
     const { error } = await supabase
       .from('automation_notifications')
@@ -126,7 +149,7 @@ export async function markAllNotificationsAsRead(): Promise<boolean> {
  */
 export async function deleteNotification(notificationId: string): Promise<boolean> {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient();
     
     const { error } = await supabase
       .from('automation_notifications')

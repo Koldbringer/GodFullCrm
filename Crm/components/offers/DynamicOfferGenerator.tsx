@@ -13,6 +13,8 @@ import { toast } from "sonner"
 import { Loader2, Copy, Check, Plus, Trash2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
+import { createClient } from "@/lib/supabase/client"
+import { v4 as uuidv4 } from "uuid"
 
 // Form schema for validation
 const formSchema = z.object({
@@ -48,7 +50,7 @@ export function DynamicOfferGenerator() {
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null)
   const [isCopied, setIsCopied] = useState(false)
   const [activeTab, setActiveTab] = useState("option0")
-  
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -77,36 +79,92 @@ export function DynamicOfferGenerator() {
       ]
     }
   })
-  
+
   const { fields: optionFields, append: appendOption, remove: removeOption } = form.useFieldArray({
     name: "options",
   })
-  
+
   const getProductsFieldArray = (optionIndex: number) => {
     return form.useFieldArray({
       name: `options.${optionIndex}.products`,
     })
   }
-  
+
   const getServicesFieldArray = (optionIndex: number) => {
     return form.useFieldArray({
       name: `options.${optionIndex}.services`,
     })
   }
-  
+
   async function onSubmit(data: FormData) {
     setIsGenerating(true)
     try {
-      // TODO: Replace with actual API call
-      console.log("Generating offer with data:", data)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      // Generate a random token for demo purposes
-      const token = Math.random().toString(36).substring(2, 15)
+      const supabase = createClient()
+
+      // Generate a unique token for the offer
+      const token = uuidv4().substring(0, 8)
+
+      // Calculate the valid until date
+      const validUntil = new Date()
+      validUntil.setDate(validUntil.getDate() + data.validDays)
+
+      // Check if customer exists, if not create a new one
+      let customerId: string
+
+      const { data: existingCustomers, error: customerError } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('email', data.clientEmail)
+        .limit(1)
+
+      if (customerError) {
+        throw new Error(`Error checking customer: ${customerError.message}`)
+      }
+
+      if (existingCustomers.length === 0) {
+        // Create a new customer
+        const { data: newCustomer, error: createError } = await supabase
+          .from('customers')
+          .insert({
+            name: data.clientName,
+            email: data.clientEmail,
+            type: 'individual',
+            status: 'lead',
+            source: 'offer_generator',
+            created_at: new Date().toISOString()
+          })
+          .select('id')
+
+        if (createError) {
+          throw new Error(`Error creating customer: ${createError.message}`)
+        }
+
+        customerId = newCustomer[0].id
+      } else {
+        customerId = existingCustomers[0].id
+      }
+
+      // Save the offer to Supabase
+      const { data: offerData, error: offerError } = await supabase
+        .from('offers')
+        .insert({
+          title: `Oferta dla ${data.clientName}`,
+          customer_id: customerId,
+          token: token,
+          status: 'pending',
+          valid_until: validUntil.toISOString(),
+          options: data.options,
+          created_at: new Date().toISOString()
+        })
+        .select()
+
+      if (offerError) {
+        throw new Error(`Error saving offer: ${offerError.message}`)
+      }
+
+      // Generate the full URL for the offer
       const fullUrl = `${window.location.origin}/offers/${token}`
-      
+
       setGeneratedUrl(fullUrl)
       toast.success("Oferta została wygenerowana!")
     } catch (error) {
@@ -116,10 +174,10 @@ export function DynamicOfferGenerator() {
       setIsGenerating(false)
     }
   }
-  
+
   function copyToClipboard() {
     if (!generatedUrl) return
-    
+
     navigator.clipboard.writeText(generatedUrl)
       .then(() => {
         setIsCopied(true)
@@ -131,7 +189,7 @@ export function DynamicOfferGenerator() {
         toast.error("Nie udało się skopiować linku")
       })
   }
-  
+
   const addNewOption = () => {
     appendOption({
       title: `Pakiet ${optionFields.length + 1}`,
@@ -140,11 +198,11 @@ export function DynamicOfferGenerator() {
       products: [{ name: "", price: 0, quantity: 1 }],
       services: [{ name: "", price: 0 }]
     })
-    
+
     // Switch to the new tab
     setActiveTab(`option${optionFields.length}`)
   }
-  
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -170,7 +228,7 @@ export function DynamicOfferGenerator() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="clientEmail"
@@ -185,7 +243,7 @@ export function DynamicOfferGenerator() {
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="validDays"
@@ -193,11 +251,11 @@ export function DynamicOfferGenerator() {
                 <FormItem>
                   <FormLabel>Ważność oferty (dni)</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      min={1} 
-                      max={30} 
-                      {...field} 
+                    <Input
+                      type="number"
+                      min={1}
+                      max={30}
+                      {...field}
                       onChange={e => field.onChange(parseInt(e.target.value))}
                     />
                   </FormControl>
@@ -208,21 +266,21 @@ export function DynamicOfferGenerator() {
                 </FormItem>
               )}
             />
-            
+
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium">Opcje oferty</h3>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={addNewOption}
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Dodaj opcję
                 </Button>
               </div>
-              
+
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-4">
                   {optionFields.map((option, index) => (
@@ -231,11 +289,11 @@ export function DynamicOfferGenerator() {
                     </TabsTrigger>
                   ))}
                 </TabsList>
-                
+
                 {optionFields.map((option, optionIndex) => {
                   const productsArray = getProductsFieldArray(optionIndex)
                   const servicesArray = getServicesFieldArray(optionIndex)
-                  
+
                   return (
                     <TabsContent key={option.id} value={`option${optionIndex}`}>
                       <Card>
@@ -272,7 +330,7 @@ export function DynamicOfferGenerator() {
                                 </FormItem>
                               )}
                             />
-                            
+
                             <FormField
                               control={form.control}
                               name={`options.${optionIndex}.recommended`}
@@ -294,7 +352,7 @@ export function DynamicOfferGenerator() {
                               )}
                             />
                           </div>
-                          
+
                           <FormField
                             control={form.control}
                             name={`options.${optionIndex}.description`}
@@ -302,17 +360,17 @@ export function DynamicOfferGenerator() {
                               <FormItem>
                                 <FormLabel>Opis opcji</FormLabel>
                                 <FormControl>
-                                  <Textarea 
-                                    placeholder="Krótki opis opcji..." 
-                                    className="resize-none" 
-                                    {...field} 
+                                  <Textarea
+                                    placeholder="Krótki opis opcji..."
+                                    className="resize-none"
+                                    {...field}
                                   />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                          
+
                           <div className="space-y-4">
                             <div className="flex justify-between items-center">
                               <h4 className="font-medium">Produkty</h4>
@@ -326,7 +384,7 @@ export function DynamicOfferGenerator() {
                                 Dodaj produkt
                               </Button>
                             </div>
-                            
+
                             {productsArray.fields.map((product, productIndex) => (
                               <div key={product.id} className="grid grid-cols-12 gap-2 items-end">
                                 <div className="col-span-6">
@@ -344,7 +402,7 @@ export function DynamicOfferGenerator() {
                                     )}
                                   />
                                 </div>
-                                
+
                                 <div className="col-span-2">
                                   <FormField
                                     control={form.control}
@@ -353,10 +411,10 @@ export function DynamicOfferGenerator() {
                                       <FormItem>
                                         <FormLabel>Ilość</FormLabel>
                                         <FormControl>
-                                          <Input 
-                                            type="number" 
-                                            min={1} 
-                                            {...field} 
+                                          <Input
+                                            type="number"
+                                            min={1}
+                                            {...field}
                                             onChange={e => field.onChange(parseInt(e.target.value))}
                                           />
                                         </FormControl>
@@ -365,7 +423,7 @@ export function DynamicOfferGenerator() {
                                     )}
                                   />
                                 </div>
-                                
+
                                 <div className="col-span-3">
                                   <FormField
                                     control={form.control}
@@ -374,11 +432,11 @@ export function DynamicOfferGenerator() {
                                       <FormItem>
                                         <FormLabel>Cena (zł)</FormLabel>
                                         <FormControl>
-                                          <Input 
-                                            type="number" 
-                                            min={0} 
-                                            step={0.01} 
-                                            {...field} 
+                                          <Input
+                                            type="number"
+                                            min={0}
+                                            step={0.01}
+                                            {...field}
                                             onChange={e => field.onChange(parseFloat(e.target.value))}
                                           />
                                         </FormControl>
@@ -387,7 +445,7 @@ export function DynamicOfferGenerator() {
                                     )}
                                   />
                                 </div>
-                                
+
                                 <div className="col-span-1">
                                   {productsArray.fields.length > 1 && (
                                     <Button
@@ -403,7 +461,7 @@ export function DynamicOfferGenerator() {
                               </div>
                             ))}
                           </div>
-                          
+
                           <div className="space-y-4">
                             <div className="flex justify-between items-center">
                               <h4 className="font-medium">Usługi</h4>
@@ -417,7 +475,7 @@ export function DynamicOfferGenerator() {
                                 Dodaj usługę
                               </Button>
                             </div>
-                            
+
                             {servicesArray.fields.map((service, serviceIndex) => (
                               <div key={service.id} className="grid grid-cols-12 gap-2 items-end">
                                 <div className="col-span-8">
@@ -435,7 +493,7 @@ export function DynamicOfferGenerator() {
                                     )}
                                   />
                                 </div>
-                                
+
                                 <div className="col-span-3">
                                   <FormField
                                     control={form.control}
@@ -444,11 +502,11 @@ export function DynamicOfferGenerator() {
                                       <FormItem>
                                         <FormLabel>Cena (zł)</FormLabel>
                                         <FormControl>
-                                          <Input 
-                                            type="number" 
-                                            min={0} 
-                                            step={0.01} 
-                                            {...field} 
+                                          <Input
+                                            type="number"
+                                            min={0}
+                                            step={0.01}
+                                            {...field}
                                             onChange={e => field.onChange(parseFloat(e.target.value))}
                                           />
                                         </FormControl>
@@ -457,7 +515,7 @@ export function DynamicOfferGenerator() {
                                     )}
                                   />
                                 </div>
-                                
+
                                 <div className="col-span-1">
                                   {servicesArray.fields.length > 1 && (
                                     <Button
@@ -480,7 +538,7 @@ export function DynamicOfferGenerator() {
                 })}
               </Tabs>
             </div>
-            
+
             <Button type="submit" className="w-full" disabled={isGenerating}>
               {isGenerating ? (
                 <>
@@ -493,20 +551,20 @@ export function DynamicOfferGenerator() {
             </Button>
           </form>
         </Form>
-        
+
         {generatedUrl && (
           <div className="mt-6 p-4 border rounded-md bg-muted">
             <p className="text-sm font-medium mb-2">Wygenerowany link do oferty:</p>
             <div className="flex items-center">
-              <Input 
-                value={generatedUrl} 
-                readOnly 
+              <Input
+                value={generatedUrl}
+                readOnly
                 className="font-mono text-xs"
               />
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="ml-2" 
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-2"
                 onClick={copyToClipboard}
                 disabled={isCopied}
               >

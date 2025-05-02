@@ -1,4 +1,5 @@
-import type { Metadata } from "next"
+"use client"
+
 import {
   ArrowUpRight,
   BarChart3,
@@ -24,11 +25,6 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
-
-export const metadata: Metadata = {
-  title: "Dashboard - GodLike HVAC CRM ERP",
-  description: "Panel główny systemu zarządzania dla firm HVAC",
-}
 
 export default function DashboardPage() {
   return (

@@ -1,12 +1,11 @@
+"use client"
+
 import { Metadata } from "next"
 import { DynamicOfferGenerator } from "@/components/offers/DynamicOfferGenerator"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export const metadata: Metadata = {
-  title: "Generator ofert - HVAC CRM",
-  description: "Tworzenie i zarządzanie dynamicznymi ofertami dla klientów",
-}
+// Metadata is now in layout.tsx
 
 export default function OffersPage() {
   return (

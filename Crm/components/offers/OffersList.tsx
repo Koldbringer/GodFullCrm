@@ -50,21 +50,52 @@ export default function OffersList() {
     const fetchOffers = async () => {
       setIsLoading(true);
       try {
-        // Pobierz oferty z Supabase
-        const response = await fetch("/api/offers");
-        if (!response.ok) {
-          throw new Error("Błąd podczas pobierania ofert");
+        const supabase = createClient();
+
+        // Fetch offers from Supabase with customer data
+        const { data, error } = await supabase
+          .from('offers')
+          .select(`
+            id,
+            title,
+            status,
+            created_at,
+            valid_until,
+            token,
+            customers (
+              id,
+              name
+            )
+          `)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          throw error;
         }
-        const data = await response.json();
+
         setOffers(data || []);
 
-        // Symulacja pobrania ofert MDX (w rzeczywistości powinno to być API)
-        // W przyszłości można zaimplementować rzeczywiste pobieranie z systemu plików
-        setMdxOffers([
-          "oferta-jan-kowalski.mdx",
-          "oferta-anna-nowak.mdx",
-          "oferta-firma-xyz.mdx"
-        ]);
+        // Fetch MDX offers from Supabase storage
+        const { data: mdxData, error: mdxError } = await supabase
+          .storage
+          .from('offer-templates')
+          .list('', {
+            limit: 100,
+            offset: 0,
+            sortBy: { column: 'name', order: 'asc' }
+          });
+
+        if (mdxError) {
+          console.error("Error fetching MDX offers:", mdxError);
+          // Continue anyway - this is not critical
+        } else {
+          // Filter only MDX files
+          const mdxFiles = mdxData
+            ?.filter(file => file.name.endsWith('.mdx'))
+            .map(file => file.name) || [];
+
+          setMdxOffers(mdxFiles);
+        }
       } catch (error) {
         console.error("Error fetching offers:", error);
         toast.error("Nie udało się pobrać listy ofert");

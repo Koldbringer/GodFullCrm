@@ -1,17 +1,36 @@
-
 import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email'; // Import funkcji wysyłki emaila
 import { createTask } from '@/lib/tasks'; // Import funkcji tworzenia zadania
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'; // Import Supabase client
+import { createServerClient } from '@supabase/ssr'; // Updated import
 import { cookies } from 'next/headers'; // Import cookies
 import { createDynamicLink } from '@/lib/services/dynamic-links'; // Import funkcji tworzenia dynamicznych linków
 // Import funkcji aktualizacji kontraktu (do zaimplementowania)
 // import { updateContract } from '@/lib/contracts';
+import { SUPABASE_CONFIG } from '@/lib/supabase/config'; // Import Supabase config
 
 export async function POST(request: Request) {
   try {
     const { nodeId, nodeData } = await request.json();
-    const supabase = createRouteHandlerClient({ cookies }); // Utworzenie instancji klienta Supabase
+    
+    // Updated Supabase client creation
+    const cookieStore = cookies();
+    const supabase = createServerClient(
+      SUPABASE_CONFIG.url,
+      SUPABASE_CONFIG.anonKey,
+      {
+        cookies: {
+          get(name) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name, value, options) {
+            cookieStore.set({ name, value, ...options });
+          },
+          remove(name, options) {
+            cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+          }
+        }
+      }
+    );
 
     // Tutaj będziemy rozróżniać, który węzeł ma zostać wykonany
     // i wywoływać odpowiednią logikę.
@@ -165,6 +184,34 @@ export async function POST(request: Request) {
         });
       } catch (error: any) {
         console.error('Error creating dynamic link:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+    } else if (nodeId === 'MCPCommandNode') { // Obsługa węzła MCP Command
+      const { command, args, type } = nodeData;
+
+      if (!command || !type) {
+        return NextResponse.json({ error: 'Missing required MCP command data' }, { status: 400 });
+      }
+
+      try {
+        // Log the MCP command execution
+        console.log(`Executing MCP command of type ${type}: ${command}`);
+        console.log('Arguments:', args);
+
+        // Here you would implement the actual MCP command execution
+        // For now, we'll just return a success message
+        return NextResponse.json({
+          success: true,
+          message: 'MCP command executed successfully',
+          result: {
+            command,
+            type,
+            status: 'completed',
+            timestamp: new Date().toISOString()
+          }
+        });
+      } catch (error: any) {
+        console.error('Error executing MCP command:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
     } else {

@@ -1,6 +1,7 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { createAutomationNotification } from './automation-notifications';
+import { SUPABASE_CONFIG } from '@/lib/supabase/config';
 
 // Types for workflow execution
 export interface WorkflowNode {
@@ -64,6 +65,28 @@ export interface NodeHandler {
 // Registry of node handlers
 const nodeHandlers: Record<string, NodeHandler> = {};
 
+// Helper function to create a Supabase client
+const createClient = () => {
+  const cookieStore = cookies();
+  return createServerClient(
+    SUPABASE_CONFIG.url,
+    SUPABASE_CONFIG.anonKey,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name, value, options) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+        }
+      }
+    }
+  );
+};
+
 /**
  * Register a node handler for a specific node type
  */
@@ -75,7 +98,7 @@ export function registerNodeHandler(nodeType: string, handler: NodeHandler) {
  * Get a workflow by ID
  */
 export async function getWorkflow(workflowId: string): Promise<Workflow | null> {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = createClient();
 
   const { data, error } = await supabase
     .from('automation_workflows')
@@ -114,7 +137,7 @@ export async function executeWorkflow(
   workflowId: string,
   initialVariables: Record<string, any> = {}
 ): Promise<WorkflowExecutionResult> {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = createClient();
   const startTime = new Date();
   const executionId = generateExecutionId();
 

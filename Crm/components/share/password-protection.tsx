@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Lock } from 'lucide-react';
-import { verifyDynamicLinkPassword } from '@/lib/services/dynamic-links';
+import { verifyDynamicLinkPassword } from '@/lib/services/dynamic-links-client';
 
 interface PasswordProtectionProps {
   token: string;

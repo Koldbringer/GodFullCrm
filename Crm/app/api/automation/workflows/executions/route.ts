@@ -1,9 +1,29 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { SUPABASE_CONFIG } from '@/lib/supabase/config';
 
 export async function GET(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  // Create Supabase client
+  const cookieStore = cookies();
+  const supabase = createServerClient(
+    SUPABASE_CONFIG.url,
+    SUPABASE_CONFIG.anonKey,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name, value, options) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+        }
+      }
+    }
+  );
+  
   const { searchParams } = new URL(request.url);
   
   const workflowId = searchParams.get('workflowId');
@@ -47,7 +67,26 @@ export async function GET(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  // Create Supabase client
+  const cookieStore = cookies();
+  const supabase = createServerClient(
+    SUPABASE_CONFIG.url,
+    SUPABASE_CONFIG.anonKey,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name, value, options) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+        }
+      }
+    }
+  );
+  
   const { searchParams } = new URL(request.url);
   
   const executionId = searchParams.get('executionId');

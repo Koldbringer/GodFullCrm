@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { StatusBadge } from "@/components/atoms/status-badge"
 import { TicketsFilterBar } from "@/components/organisms/tickets-filter-bar"
-import { fallbackTicketsData } from "./tickets-server"
+import { fallbackTicketsData } from "./tickets-server-client"
 
 interface TicketsListProps {
   initialTickets?: any[]

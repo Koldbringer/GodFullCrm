@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { SUPABASE_CONFIG } from '@/lib/supabase/config';
 import { 
   getAutomationNotifications, 
   markNotificationAsRead, 
@@ -38,7 +39,25 @@ export async function POST(request: Request) {
       );
     }
     
-    const supabase = createRouteHandlerClient({ cookies });
+    // Create Supabase client
+    const cookieStore = cookies();
+    const supabase = createServerClient(
+      SUPABASE_CONFIG.url,
+      SUPABASE_CONFIG.anonKey,
+      {
+        cookies: {
+          get(name) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name, value, options) {
+            cookieStore.set({ name, value, ...options });
+          },
+          remove(name, options) {
+            cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+          }
+        }
+      }
+    );
     
     const { data, error } = await supabase.from('automation_notifications').insert({
       workflow_id: workflowId,

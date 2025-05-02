@@ -1,12 +1,15 @@
+/**
+ * This file provides a Supabase client for API route handlers
+ * Use this in route.ts files for API routes
+ */
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { Database } from '@/types/supabase'
 import { SUPABASE_CONFIG } from './config'
 import { SupabaseClient } from '@supabase/supabase-js'
 
 // Route handler client - use this in API routes (route.ts)
 export const createRouteClient = async (): Promise<SupabaseClient<Database> | null> => {
-  // Dynamically import to avoid issues with client components
-  const { createClient } = await import('@supabase/supabase-js')
-
   // Check if Supabase is configured
   if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey) {
     if (process.env.NODE_ENV === 'production') {
@@ -17,20 +20,12 @@ export const createRouteClient = async (): Promise<SupabaseClient<Database> | nu
   }
 
   try {
-    console.log('Creating route client with URL:', SUPABASE_CONFIG.url)
+    const cookieStore = cookies()
 
-    // Create a Supabase client for API route use
-    return createClient<Database>(
-      SUPABASE_CONFIG.url,
-      SUPABASE_CONFIG.anonKey,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        }
-      }
-    )
+    // Create a Supabase client for API routes with proper cookie handling
+    return createRouteHandlerClient<Database>({
+      cookies: () => cookieStore
+    })
   } catch (error) {
     console.error('Error creating Supabase route client:', error)
     return null

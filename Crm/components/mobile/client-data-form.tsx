@@ -37,7 +37,7 @@ interface ClientDataFormProps {
 export function ClientDataForm({ token, initialData, onSuccess }: ClientDataFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
-  
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,15 +52,58 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
       additionalInfo: initialData?.additionalInfo || "",
     }
   })
-  
+
   async function onSubmit(data: FormData) {
     setIsSubmitting(true)
     try {
-      // TODO: Replace with actual Supabase implementation
-      // For now, we'll simulate an API call
-      console.log("Submitting form data:", data)
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
+      const supabase = createClient()
+
+      // Save form data to Supabase
+      const { error: tokenUpdateError } = await supabase
+        .from('client_form_tokens')
+        .update({
+          status: 'submitted',
+          updated_at: new Date().toISOString()
+        })
+        .eq('token', token)
+
+      if (tokenUpdateError) {
+        throw new Error(`Error updating token status: ${tokenUpdateError.message}`)
+      }
+
+      // Save the client data
+      const { error: clientDataError } = await supabase
+        .from('client_form_submissions')
+        .insert({
+          token,
+          form_data: data,
+          status: 'new',
+          created_at: new Date().toISOString()
+        })
+
+      if (clientDataError) {
+        throw new Error(`Error saving client data: ${clientDataError.message}`)
+      }
+
+      // Create a new customer record if needed
+      const { error: customerError } = await supabase
+        .from('customers')
+        .insert({
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          type: 'individual',
+          status: 'lead',
+          source: 'client_form',
+          created_at: new Date().toISOString()
+        })
+        .select()
+
+      if (customerError) {
+        console.warn(`Warning: Could not create customer record: ${customerError.message}`)
+        // Continue anyway - this is not critical
+      }
+
       setIsSuccess(true)
       toast.success("Formularz został wysłany pomyślnie!")
       onSuccess?.()
@@ -71,7 +114,7 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
       setIsSubmitting(false)
     }
   }
-  
+
   if (isSuccess) {
     return (
       <Card className="w-full max-w-md mx-auto">
@@ -87,7 +130,7 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
       </Card>
     )
   }
-  
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
@@ -112,7 +155,7 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
                 </FormItem>
               )}
             />
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -127,7 +170,7 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="phone"
@@ -142,7 +185,7 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="address"
@@ -156,7 +199,7 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
                 </FormItem>
               )}
             />
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -171,7 +214,7 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="postalCode"
@@ -186,7 +229,7 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="interestType"
@@ -207,7 +250,7 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
                 </FormItem>
               )}
             />
-            
+
             {form.watch("interestType") === "installation" && (
               <FormField
                 control={form.control}
@@ -216,10 +259,10 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
                   <FormItem>
                     <FormLabel>Liczba urządzeń</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min={1} 
-                        {...field} 
+                      <Input
+                        type="number"
+                        min={1}
+                        {...field}
                         onChange={e => field.onChange(parseInt(e.target.value))}
                       />
                     </FormControl>
@@ -228,7 +271,7 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
                 )}
               />
             )}
-            
+
             <FormField
               control={form.control}
               name="additionalInfo"
@@ -236,17 +279,17 @@ export function ClientDataForm({ token, initialData, onSuccess }: ClientDataForm
                 <FormItem>
                   <FormLabel>Dodatkowe informacje</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Dodatkowe informacje, które mogą być przydatne..." 
-                      className="resize-none" 
-                      {...field} 
+                    <Textarea
+                      placeholder="Dodatkowe informacje, które mogą być przydatne..."
+                      className="resize-none"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>

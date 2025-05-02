@@ -36,7 +36,6 @@ const nextConfig = {
   },
 
   // Performance optimizations
-  swcMinify: true, // Use SWC minifier for better performance
   reactStrictMode: true, // Enable React strict mode for better development experience
 
   // Add compression for better performance
@@ -93,12 +92,12 @@ const nextConfig = {
 
   // Experimental features for better performance
   experimental: {
-    // Enable server actions
-    serverActions: true,
+    // Enable server actions (updated for Next.js 15)
+    serverActions: {
+      allowedOrigins: ['localhost:3000'],
+    },
     // Enable optimistic updates
     optimisticClientCache: true,
-    // Enable app directory
-    appDir: true,
   },
 }
 

@@ -1,6 +1,7 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { executeWorkflow, Workflow, WorkflowTrigger } from './workflow-execution';
+import { SUPABASE_CONFIG } from '@/lib/supabase/config';
 
 // Types for workflow triggers
 export interface ScheduleTrigger extends WorkflowTrigger {
@@ -28,11 +29,33 @@ export interface WebhookTrigger extends WorkflowTrigger {
   };
 }
 
+// Helper function to create a Supabase client
+const createClient = () => {
+  const cookieStore = cookies();
+  return createServerClient(
+    SUPABASE_CONFIG.url,
+    SUPABASE_CONFIG.anonKey,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name, value, options) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+        }
+      }
+    }
+  );
+};
+
 /**
  * Get all workflows with triggers
  */
 export async function getWorkflowsWithTriggers(): Promise<Workflow[]> {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = createClient();
   
   const { data, error } = await supabase
     .from('automation_workflows')
@@ -192,7 +215,7 @@ function getNestedValue(obj: Record<string, any>, path: string): any {
  * Update the last executed time for a trigger
  */
 async function updateTriggerLastExecuted(workflowId: string, triggerId: string): Promise<void> {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = createClient();
   
   try {
     // Get the current workflow

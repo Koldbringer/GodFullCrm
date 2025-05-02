@@ -23,7 +23,8 @@ import {
   HelpCircle,
   ScrollText,
   Map,
-  Bot
+  Bot,
+  Sparkles
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -117,8 +118,30 @@ export function SidebarNav({ className, collapsed = false }: SidebarNavProps) {
     },
     {
       title: "Automatyzacja",
-      href: "/automation",
-      icon: <Bot className="h-5 w-5" />
+      icon: <Bot className="h-5 w-5" />,
+      href: "#",
+      submenu: [
+        {
+          title: "Dashboard",
+          href: "/automation/dashboard",
+          icon: <LayoutDashboard className="h-4 w-4" />
+        },
+        {
+          title: "Workflows",
+          href: "/automation",
+          icon: <Activity className="h-4 w-4" />
+        },
+        {
+          title: "AI Insights",
+          href: "/automation/ai-insights",
+          icon: <Sparkles className="h-4 w-4" />
+        },
+        {
+          title: "Mastra Assistant",
+          href: "/automation/mastra",
+          icon: <Bot className="h-4 w-4" />
+        }
+      ]
     },
     {
       title: "Dokumenty",
@@ -262,6 +285,12 @@ export function SidebarNav({ className, collapsed = false }: SidebarNavProps) {
                           "w-full justify-start py-1.5",
                           isSubActive && "bg-accent text-accent-foreground"
                         )}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            window.location.href = subItem.href
+                          }
+                        }}
                       >
                         <span className={cn(
                           "mr-2 flex items-center justify-center",
@@ -381,6 +410,12 @@ export function SidebarNav({ className, collapsed = false }: SidebarNavProps) {
             <Button
               variant="ghost"
               className="w-full justify-start py-2"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  window.location.href = '/help'
+                }
+              }}
             >
               <HelpCircle className="mr-2 h-5 w-5 text-muted-foreground" />
               <span className="text-sm font-medium text-muted-foreground">

@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Check, Copy, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { createDynamicLink, DynamicLinkType } from '@/lib/services/dynamic-links';
+import { DynamicLinkType } from '@/lib/services/dynamic-links-client';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const formSchema = z.object({
@@ -65,17 +65,29 @@ export function DynamicLinkGenerator({
   async function onSubmit(data: FormData) {
     setIsGenerating(true);
     try {
-      const { url, token } = await createDynamicLink({
-        linkType: data.linkType as DynamicLinkType,
-        resourceId: data.resourceId,
-        title: data.title,
-        description: data.description,
-        expiresInDays: data.expiresInDays,
-        password: data.passwordProtected ? data.password : undefined,
-        customSlug: data.customSlug,
+      // Use API endpoint instead of direct function call
+      const response = await fetch('/api/dynamic-links', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          linkType: data.linkType,
+          resourceId: data.resourceId,
+          title: data.title,
+          description: data.description,
+          expiresInDays: data.expiresInDays,
+          password: data.passwordProtected ? data.password : undefined,
+          customSlug: data.customSlug,
+        }),
       });
 
-      const fullUrl = `${window.location.origin}${url}`;
+      if (!response.ok) {
+        throw new Error('Failed to generate link');
+      }
+
+      const result = await response.json();
+      const fullUrl = `${window.location.origin}${result.url}`;
       setGeneratedUrl(fullUrl);
       toast.success('Link został wygenerowany!');
     } catch (error) {

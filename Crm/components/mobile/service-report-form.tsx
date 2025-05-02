@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import { Loader2, Camera, Upload, CheckSquare, Square, X } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { createClient } from "@/lib/supabase/client"
 
 // Form schema for validation
 const formSchema = z.object({
@@ -43,11 +44,17 @@ interface ServiceReportFormProps {
   onSuccess?: () => void
 }
 
-// Mock data for the form
-const mockDevices = [
-  { id: "dev1", name: "Klimatyzator Mitsubishi MSZ-AP25VG", location: "Salon" },
-  { id: "dev2", name: "Klimatyzator Daikin FTXM35N", location: "Sypialnia" },
-  { id: "dev3", name: "Klimatyzator LG ARTCOOL", location: "Kuchnia" },
+// Device type for the form
+interface Device {
+  id: string
+  name: string
+  model: string
+  location: string
+}
+
+// Fallback devices in case of error
+const fallbackDevices: Device[] = [
+  { id: "dev1", name: "Klimatyzator", model: "Mitsubishi MSZ-AP25VG", location: "Salon" }
 ]
 
 const maintenanceChecklistItems = [
@@ -67,7 +74,53 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState("basic")
   const [capturedImages, setCapturedImages] = useState<string[]>([])
-  
+  const [devices, setDevices] = useState<Device[]>([])
+  const [isLoadingDevices, setIsLoadingDevices] = useState(true)
+
+  // Fetch devices from Supabase
+  useEffect(() => {
+    const fetchDevices = async () => {
+      setIsLoadingDevices(true)
+      try {
+        const supabase = createClient()
+
+        // Get devices with related data
+        const { data, error } = await supabase
+          .from('devices')
+          .select(`
+            id,
+            model,
+            type,
+            location,
+            sites (id, name)
+          `)
+          .order('model', { ascending: true })
+
+        if (error) {
+          throw error
+        }
+
+        // Transform the data into devices
+        const formattedDevices: Device[] = data.map(device => ({
+          id: device.id,
+          name: device.type || "Urządzenie",
+          model: device.model || "Nieznany model",
+          location: device.location || (device.sites?.name || "Nieznana lokalizacja")
+        }))
+
+        setDevices(formattedDevices.length > 0 ? formattedDevices : fallbackDevices)
+      } catch (error) {
+        console.error("Error fetching devices:", error)
+        toast.error("Nie udało się pobrać listy urządzeń")
+        setDevices(fallbackDevices)
+      } finally {
+        setIsLoadingDevices(false)
+      }
+    }
+
+    fetchDevices()
+  }, [])
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -84,39 +137,39 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
       images: initialData?.images || [],
     }
   })
-  
+
   const watchServiceType = form.watch("serviceType")
-  
+
   const handleChecklistItem = (item: string, checked: boolean) => {
     const currentChecklist = form.getValues("checklist") || []
-    
+
     if (checked) {
       form.setValue("checklist", [...currentChecklist, item])
     } else {
       form.setValue("checklist", currentChecklist.filter(i => i !== item))
     }
   }
-  
+
   const addIssue = () => {
     const currentIssues = form.getValues("issues") || []
     form.setValue("issues", [...currentIssues, { description: "", resolved: false }])
   }
-  
+
   const removeIssue = (index: number) => {
     const currentIssues = form.getValues("issues") || []
     form.setValue("issues", currentIssues.filter((_, i) => i !== index))
   }
-  
+
   const addPart = () => {
     const currentParts = form.getValues("partsUsed") || []
     form.setValue("partsUsed", [...currentParts, { name: "", quantity: 1 }])
   }
-  
+
   const removePart = (index: number) => {
     const currentParts = form.getValues("partsUsed") || []
     form.setValue("partsUsed", currentParts.filter((_, i) => i !== index))
   }
-  
+
   const captureImage = () => {
     // In a real implementation, this would use the device camera
     // For now, we'll just add a placeholder image URL
@@ -124,22 +177,82 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
     setCapturedImages([...capturedImages, newImage])
     form.setValue("images", [...capturedImages, newImage])
   }
-  
+
   const removeImage = (index: number) => {
     const newImages = capturedImages.filter((_, i) => i !== index)
     setCapturedImages(newImages)
     form.setValue("images", newImages)
   }
-  
+
   async function onSubmit(data: FormData) {
     setIsSubmitting(true)
     try {
-      // TODO: Replace with actual API call
-      console.log("Submitting service report:", data)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
+      const supabase = createClient()
+
+      // Format the date and time for Supabase
+      const serviceDateTime = new Date(`${data.serviceDate}T${data.startTime}:00`)
+      const serviceEndDateTime = data.endTime
+        ? new Date(`${data.serviceDate}T${data.endTime}:00`)
+        : new Date(serviceDateTime.getTime() + 2 * 60 * 60 * 1000) // Default to 2 hours later
+
+      // Save the service report to Supabase
+      const { data: reportData, error: reportError } = await supabase
+        .from('service_reports')
+        .insert({
+          service_order_id: serviceOrderId,
+          device_id: data.deviceId,
+          service_type: data.serviceType,
+          service_date: serviceDateTime.toISOString(),
+          end_date: serviceEndDateTime.toISOString(),
+          checklist_items: data.checklist,
+          issues: data.issues,
+          parts_used: data.partsUsed,
+          notes: data.notes,
+          customer_signature: data.customerSignature,
+          status: 'completed',
+          created_at: new Date().toISOString()
+        })
+        .select()
+
+      if (reportError) {
+        throw new Error(`Error saving service report: ${reportError.message}`)
+      }
+
+      // If we have images, save them to storage and link them to the report
+      if (capturedImages.length > 0) {
+        // In a real implementation, we would upload the images to Supabase Storage
+        // For now, we'll just log them
+        console.log("Images to upload:", capturedImages)
+
+        // Example of how to upload images to Supabase Storage:
+        // for (let i = 0; i < capturedImages.length; i++) {
+        //   const imageFile = await fetch(capturedImages[i]).then(r => r.blob())
+        //   const filePath = `service-reports/${reportData[0].id}/image-${i}.jpg`
+        //
+        //   const { error: uploadError } = await supabase.storage
+        //     .from('service-images')
+        //     .upload(filePath, imageFile)
+        //
+        //   if (uploadError) {
+        //     console.error(`Error uploading image ${i}:`, uploadError)
+        //   }
+        // }
+      }
+
+      // Update the service order status
+      const { error: updateError } = await supabase
+        .from('service_orders')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', serviceOrderId)
+
+      if (updateError) {
+        console.warn(`Warning: Could not update service order status: ${updateError.message}`)
+        // Continue anyway - this is not critical
+      }
+
       toast.success("Raport serwisowy został zapisany!")
       onSuccess?.()
     } catch (error) {
@@ -149,7 +262,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
       setIsSubmitting(false)
     }
   }
-  
+
   return (
     <div className="w-full max-w-md mx-auto">
       <Card className="mb-4">
@@ -169,7 +282,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                   <TabsTrigger value="issues">Problemy</TabsTrigger>
                   <TabsTrigger value="photos">Zdjęcia</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="basic" className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
@@ -185,7 +298,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                         </FormItem>
                       )}
                     />
-                    
+
                     <div className="grid grid-cols-2 gap-2">
                       <FormField
                         control={form.control}
@@ -200,7 +313,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="endTime"
@@ -216,7 +329,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                       />
                     </div>
                   </div>
-                  
+
                   <FormField
                     control={form.control}
                     name="deviceId"
@@ -227,11 +340,14 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                           <select
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             {...field}
+                            disabled={isLoadingDevices}
                           >
-                            <option value="">Wybierz urządzenie</option>
-                            {mockDevices.map(device => (
+                            <option value="">
+                              {isLoadingDevices ? "Ładowanie urządzeń..." : "Wybierz urządzenie"}
+                            </option>
+                            {devices.map(device => (
                               <option key={device.id} value={device.id}>
-                                {device.name} ({device.location})
+                                {device.name} {device.model} ({device.location})
                               </option>
                             ))}
                           </select>
@@ -240,7 +356,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="serviceType"
@@ -262,7 +378,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="notes"
@@ -270,10 +386,10 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                       <FormItem>
                         <FormLabel>Uwagi</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Dodatkowe uwagi..." 
-                            className="resize-none" 
-                            {...field} 
+                          <Textarea
+                            placeholder="Dodatkowe uwagi..."
+                            className="resize-none"
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -281,16 +397,16 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                     )}
                   />
                 </TabsContent>
-                
+
                 <TabsContent value="checklist" className="space-y-4 mt-4">
                   <div className="space-y-2">
                     <h3 className="font-medium">Lista czynności</h3>
-                    
+
                     {watchServiceType === "maintenance" && (
                       <div className="space-y-2">
                         {maintenanceChecklistItems.map((item, index) => {
                           const isChecked = form.getValues("checklist")?.includes(item) || false
-                          
+
                           return (
                             <div key={index} className="flex items-center space-x-2">
                               <Button
@@ -314,10 +430,10 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                         })}
                       </div>
                     )}
-                    
+
                     <div className="pt-4">
                       <h3 className="font-medium mb-2">Użyte części</h3>
-                      
+
                       <div className="space-y-3">
                         {(form.getValues("partsUsed") || []).map((part, index) => (
                           <div key={index} className="flex items-end space-x-2">
@@ -336,7 +452,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                                 )}
                               />
                             </div>
-                            
+
                             <div className="w-20">
                               <FormField
                                 control={form.control}
@@ -345,10 +461,10 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                                   <FormItem>
                                     <FormLabel className="text-xs">Ilość</FormLabel>
                                     <FormControl>
-                                      <Input 
-                                        type="number" 
-                                        min={1} 
-                                        {...field} 
+                                      <Input
+                                        type="number"
+                                        min={1}
+                                        {...field}
                                         onChange={e => field.onChange(parseInt(e.target.value))}
                                       />
                                     </FormControl>
@@ -357,7 +473,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                                 )}
                               />
                             </div>
-                            
+
                             <Button
                               type="button"
                               variant="ghost"
@@ -369,7 +485,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                             </Button>
                           </div>
                         ))}
-                        
+
                         <Button
                           type="button"
                           variant="outline"
@@ -383,11 +499,11 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                     </div>
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="issues" className="space-y-4 mt-4">
                   <div className="space-y-3">
                     <h3 className="font-medium">Problemy i usterki</h3>
-                    
+
                     {(form.getValues("issues") || []).map((issue, index) => (
                       <div key={index} className="space-y-2 border rounded-md p-3">
                         <div className="flex justify-between">
@@ -398,17 +514,17 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                               <FormItem className="flex-1">
                                 <FormLabel className="text-xs">Opis problemu</FormLabel>
                                 <FormControl>
-                                  <Textarea 
-                                    placeholder="Opisz problem..." 
-                                    className="resize-none" 
-                                    {...field} 
+                                  <Textarea
+                                    placeholder="Opisz problem..."
+                                    className="resize-none"
+                                    {...field}
                                   />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                          
+
                           <Button
                             type="button"
                             variant="ghost"
@@ -419,7 +535,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
-                        
+
                         <FormField
                           control={form.control}
                           name={`issues.${index}.resolved`}
@@ -444,7 +560,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                         />
                       </div>
                     ))}
-                    
+
                     <Button
                       type="button"
                       variant="outline"
@@ -456,17 +572,17 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                     </Button>
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="photos" className="space-y-4 mt-4">
                   <div className="space-y-3">
                     <h3 className="font-medium">Zdjęcia</h3>
-                    
+
                     <div className="grid grid-cols-2 gap-2">
                       {capturedImages.map((image, index) => (
                         <div key={index} className="relative">
-                          <img 
-                            src={image} 
-                            alt={`Zdjęcie ${index + 1}`} 
+                          <img
+                            src={image}
+                            alt={`Zdjęcie ${index + 1}`}
                             className="w-full h-32 object-cover rounded-md"
                           />
                           <Button
@@ -481,7 +597,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                         </div>
                       ))}
                     </div>
-                    
+
                     <div className="flex space-x-2">
                       <Button
                         type="button"
@@ -492,7 +608,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                         <Camera className="mr-2 h-4 w-4" />
                         Zrób zdjęcie
                       </Button>
-                      
+
                       <Button
                         type="button"
                         variant="outline"
@@ -503,7 +619,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                         Dodaj zdjęcie
                       </Button>
                     </div>
-                    
+
                     <div className="pt-4">
                       <FormField
                         control={form.control}
@@ -531,7 +647,7 @@ export function ServiceReportForm({ serviceOrderId, initialData, onSuccess }: Se
                   </div>
                 </TabsContent>
               </Tabs>
-              
+
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>

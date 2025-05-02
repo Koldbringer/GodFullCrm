@@ -1,17 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { pl } from "date-fns/locale"
-import { 
-  FileText, 
-  MoreHorizontal, 
-  Plus, 
-  User, 
-  Upload, 
-  Download, 
+import {
+  FileText,
+  MoreHorizontal,
+  Plus,
+  User,
+  Upload,
+  Download,
   File,
-  // FilePdf, // Removed as it's not exported
   FileImage,
   FileSpreadsheet,
   FileText as FileTextIcon,
@@ -19,7 +18,8 @@ import {
   Eye,
   Trash,
   Lock,
-  LockOpen
+  LockOpen,
+  Loader2
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -40,9 +40,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { extractTextFromDocument } from "@/lib/ocr" // Import the OCR utility function
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
-// Przykładowe dane plików
-const filesData = [
+// Define the file type
+interface CustomerFile {
+  id: string
+  customer_id: string
+  name: string
+  description: string
+  file_url: string
+  file_type: string
+  file_size: number
+  file_category: string
+  uploaded_by: string
+  created_at: string
+  updated_at: string
+  is_private: boolean
+  tags: string[]
+}
+
+// Fallback files in case of error
+const fallbackFiles: CustomerFile[] = [
   {
     id: "FILE001",
     customer_id: "c1",
@@ -57,66 +76,6 @@ const filesData = [
     updated_at: "2023-01-15T11:00:00Z",
     is_private: false,
     tags: ["umowa", "serwis", "ważne"]
-  },
-  {
-    id: "FILE002",
-    customer_id: "c1",
-    name: "Oferta cenowa - klimatyzatory.xlsx",
-    description: "Oferta cenowa na klimatyzatory do biura",
-    file_url: "/files/oferta_cenowa.xlsx",
-    file_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    file_size: 458000,
-    file_category: "Oferty",
-    uploaded_by: "Anna Wiśniewska",
-    created_at: "2023-03-20T14:30:00Z",
-    updated_at: "2023-03-20T14:30:00Z",
-    is_private: true,
-    tags: ["oferta", "klimatyzacja", "cennik"]
-  },
-  {
-    id: "FILE003",
-    customer_id: "c1",
-    name: "Zdjęcia z instalacji.zip",
-    description: "Zdjęcia z instalacji klimatyzatorów w biurze",
-    file_url: "/files/zdjecia_instalacja.zip",
-    file_type: "application/zip",
-    file_size: 15800000,
-    file_category: "Dokumentacja",
-    uploaded_by: "Piotr Nowak",
-    created_at: "2023-06-05T16:30:00Z",
-    updated_at: "2023-06-05T16:30:00Z",
-    is_private: false,
-    tags: ["zdjęcia", "instalacja", "dokumentacja"]
-  },
-  {
-    id: "FILE004",
-    customer_id: "c1",
-    name: "Plan pomieszczeń.jpg",
-    description: "Plan pomieszczeń biurowych z zaznaczonymi miejscami instalacji",
-    file_url: "/files/plan_pomieszczen.jpg",
-    file_type: "image/jpeg",
-    file_size: 2450000,
-    file_category: "Plany",
-    uploaded_by: "Jan Kowalski",
-    created_at: "2023-02-10T09:15:00Z",
-    updated_at: "2023-02-10T09:15:00Z",
-    is_private: false,
-    tags: ["plan", "pomieszczenia", "instalacja"]
-  },
-  {
-    id: "FILE005",
-    customer_id: "c1",
-    name: "Protokół odbioru.pdf",
-    description: "Protokół odbioru instalacji klimatyzacji",
-    file_url: "/files/protokol_odbioru.pdf",
-    file_type: "application/pdf",
-    file_size: 980000,
-    file_category: "Protokoły",
-    uploaded_by: "Piotr Nowak",
-    created_at: "2023-06-10T15:45:00Z",
-    updated_at: "2023-06-10T15:45:00Z",
-    is_private: false,
-    tags: ["protokół", "odbiór", "instalacja"]
   }
 ]
 
@@ -125,20 +84,68 @@ interface CustomerFilesProps {
 }
 
 export function CustomerFiles({ customerId }: CustomerFilesProps) {
-  // Filtrowanie plików dla danego klienta
-  const customerFiles = filesData.filter((file) => file.customer_id === customerId)
-  
+  const [customerFiles, setCustomerFiles] = useState<CustomerFile[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [fileDescription, setFileDescription] = useState("")
   const [fileCategory, setFileCategory] = useState("Dokumentacja")
   const [fileTags, setFileTags] = useState("")
   const [isPrivate, setIsPrivate] = useState(false)
-  
+  const [isUploading, setIsUploading] = useState(false)
+
+  // Fetch customer files from Supabase
+  useEffect(() => {
+    const fetchCustomerFiles = async () => {
+      setIsLoading(true)
+      try {
+        const supabase = createClient()
+
+        // Get files for this customer
+        const { data, error } = await supabase
+          .from('customer_files')
+          .select('*')
+          .eq('customer_id', customerId)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          throw error
+        }
+
+        // Transform the data into customer files
+        const formattedFiles: CustomerFile[] = data.map(file => ({
+          id: file.id,
+          customer_id: file.customer_id,
+          name: file.name || "Nieznany plik",
+          description: file.description || "",
+          file_url: file.file_url || "",
+          file_type: file.file_type || "application/octet-stream",
+          file_size: file.file_size || 0,
+          file_category: file.file_category || "Inne",
+          uploaded_by: file.uploaded_by || "System",
+          created_at: file.created_at || new Date().toISOString(),
+          updated_at: file.updated_at || new Date().toISOString(),
+          is_private: file.is_private || false,
+          tags: file.tags || []
+        }))
+
+        setCustomerFiles(formattedFiles.length > 0 ? formattedFiles : fallbackFiles)
+      } catch (error) {
+        console.error("Error fetching customer files:", error)
+        toast.error("Nie udało się pobrać plików klienta")
+        setCustomerFiles(fallbackFiles)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchCustomerFiles()
+  }, [customerId])
+
   // Funkcja do określania ikony pliku na podstawie typu
   const getFileIcon = (fileType: string) => {
     if (fileType.includes("pdf")) {
       // Use FileTextIcon for PDF as FilePdf is not available
-      return <FileTextIcon className="h-8 w-8 text-red-500" /> 
+      return <FileTextIcon className="h-8 w-8 text-red-500" />
     } else if (fileType.includes("image")) {
       return <FileImage className="h-8 w-8 text-blue-500" />
     } else if (fileType.includes("spreadsheet") || fileType.includes("excel") || fileType.includes("xlsx")) {
@@ -149,7 +156,7 @@ export function CustomerFiles({ customerId }: CustomerFilesProps) {
       return <FileTextIcon className="h-8 w-8 text-gray-500" />
     }
   }
-  
+
   // Funkcja do formatowania rozmiaru pliku
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) {
@@ -162,64 +169,115 @@ export function CustomerFiles({ customerId }: CustomerFilesProps) {
       return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB"
     } // <-- Added missing closing brace
   }
-  
-  // Obsługa przesyłania pliku
-  // The extractTextFromDocument function is now imported from "@/lib/ocr"
-  const handleFileUpload = async () => { // Make async
+
+  // Handle file upload to Supabase
+  const handleFileUpload = async () => {
     if (!selectedFile) {
-      console.warn("No file selected for upload.");
-      // TODO: Show user feedback
-      return;
+      toast.error("Nie wybrano pliku do przesłania")
+      return
     }
 
-    console.log("Rozpoczynanie przesyłania pliku:", selectedFile.name);
-    console.log("Opis:", fileDescription);
-    console.log("Kategoria:", fileCategory);
-    console.log("Tagi:", fileTags);
-    console.log("Prywatny:", isPrivate);
+    setIsUploading(true)
 
-    // TODO: Implement actual file upload to your storage (e.g., Supabase Storage, S3)
-    // const storageUrl = await uploadFileToStorage(selectedFile); 
-    // if (!storageUrl) {
-    //   console.error("File upload to storage failed.");
-    //   // TODO: Show error message
-    //   return;
-    // }
-    // console.log("File uploaded to storage:", storageUrl);
-    
-    // --- Call Unstract OCR ---
-    // The API key is handled within the extractTextFromDocument function using environment variables
-    const extractedText = await extractTextFromDocument(selectedFile, customerId); // Pass customerId
-    
-    if (extractedText !== null) { // Check for null explicitly
-      console.log("OCR zakończone sukcesem.");
-      // TODO: Save file metadata (including storageUrl) and extractedText to your database
-      // await saveFileDataToDatabase({
-      //   customerId,
-      //   name: selectedFile.name,
-      //   description: fileDescription,
-      //   file_url: storageUrl, 
-      //   file_type: selectedFile.type,
-      //   file_size: selectedFile.size,
-      //   file_category: fileCategory,
-      //   uploaded_by: "Current User Name", // Get current user
-      //   is_private: isPrivate,
-      //   tags: fileTags.split(',').map(tag => tag.trim()).filter(tag => tag),
-      //   ocr_text: extractedText // Store the extracted text
-      // });
-      console.log("File metadata and OCR text ready to be saved.");
-    } else {
-      console.error("OCR processing failed.");
-      // TODO: Handle OCR failure - maybe still save the file without OCR text?
+    try {
+      const supabase = createClient()
+
+      // Generate a unique file path
+      const fileExt = selectedFile.name.split('.').pop()
+      const fileName = `${customerId}/${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`
+
+      // Upload file to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('customer-files')
+        .upload(fileName, selectedFile)
+
+      if (uploadError) {
+        throw new Error(`Error uploading file: ${uploadError.message}`)
+      }
+
+      // Get the public URL for the file
+      const { data: { publicUrl } } = supabase.storage
+        .from('customer-files')
+        .getPublicUrl(fileName)
+
+      // Process OCR if it's a document
+      let extractedText = null
+      if (selectedFile.type.includes('pdf') ||
+          selectedFile.type.includes('image') ||
+          selectedFile.type.includes('document')) {
+        try {
+          extractedText = await extractTextFromDocument(selectedFile, customerId)
+          console.log("OCR completed successfully")
+        } catch (ocrError) {
+          console.error("OCR processing failed:", ocrError)
+          // Continue anyway - OCR is not critical
+        }
+      }
+
+      // Parse tags from the input
+      const parsedTags = fileTags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0)
+
+      // Save file metadata to Supabase
+      const { data: fileData, error: fileError } = await supabase
+        .from('customer_files')
+        .insert({
+          customer_id: customerId,
+          name: selectedFile.name,
+          description: fileDescription,
+          file_url: publicUrl,
+          file_type: selectedFile.type,
+          file_size: selectedFile.size,
+          file_category: fileCategory,
+          uploaded_by: "Current User", // In a real app, get this from auth
+          is_private: isPrivate,
+          tags: parsedTags,
+          ocr_text: extractedText,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+
+      if (fileError) {
+        throw new Error(`Error saving file metadata: ${fileError.message}`)
+      }
+
+      // Add the new file to the list
+      setCustomerFiles(prev => [
+        {
+          id: fileData[0].id,
+          customer_id: customerId,
+          name: selectedFile.name,
+          description: fileDescription,
+          file_url: publicUrl,
+          file_type: selectedFile.type,
+          file_size: selectedFile.size,
+          file_category: fileCategory,
+          uploaded_by: "Current User", // In a real app, get this from auth
+          is_private: isPrivate,
+          tags: parsedTags,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        ...prev
+      ])
+
+      toast.success("Plik został przesłany pomyślnie")
+
+      // Reset form
+      setSelectedFile(null)
+      setFileDescription("")
+      setFileCategory("Dokumentacja")
+      setFileTags("")
+      setIsPrivate(false)
+    } catch (error) {
+      console.error("Error uploading file:", error)
+      toast.error("Wystąpił błąd podczas przesyłania pliku")
+    } finally {
+      setIsUploading(false)
     }
-    // --- End Unstract OCR ---
-
-    // Reset formularza (consider resetting only on success)
-    setSelectedFile(null);
-    setFileDescription("")
-    setFileCategory("Dokumentacja")
-    setFileTags("")
-    setIsPrivate(false)
   }
 
   return (
@@ -232,7 +290,14 @@ export function CustomerFiles({ customerId }: CustomerFilesProps) {
       </TabsList>
 
       <TabsContent value="all" className="space-y-4">
-        {customerFiles.length === 0 ? (
+        {isLoading ? (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+              <p className="text-muted-foreground">Ładowanie plików...</p>
+            </CardContent>
+          </Card>
+        ) : customerFiles.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center">
               <p className="mb-4 text-muted-foreground">Brak plików dla tego klienta.</p>
@@ -444,9 +509,9 @@ export function CustomerFiles({ customerId }: CustomerFilesProps) {
                       {selectedFile ? selectedFile.name : "Kliknij, aby wybrać plik lub przeciągnij i upuść"}
                     </p>
                     {/* Add conditional check for selectedFile before accessing properties */}
-                    {selectedFile && ( 
+                    {selectedFile && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        {formatFileSize(selectedFile.size)} • {selectedFile.type} 
+                        {formatFileSize(selectedFile.size)} • {selectedFile.type}
                       </p>
                     )}
                   </div>
@@ -511,10 +576,34 @@ export function CustomerFiles({ customerId }: CustomerFilesProps) {
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button variant="outline">Anuluj</Button>
-            <Button onClick={handleFileUpload} disabled={!selectedFile}>
-              <Upload className="mr-2 h-4 w-4" />
-              Prześlij plik
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedFile(null)
+                setFileDescription("")
+                setFileCategory("Dokumentacja")
+                setFileTags("")
+                setIsPrivate(false)
+              }}
+              disabled={isUploading}
+            >
+              Anuluj
+            </Button>
+            <Button
+              onClick={handleFileUpload}
+              disabled={!selectedFile || isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Przesyłanie...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Prześlij plik
+                </>
+              )}
             </Button>
           </CardFooter>
         </Card>

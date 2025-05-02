@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { updateTicket } from "@/lib/api"
 import { createClient } from "@/lib/supabase"
-import { fallbackTicketsData } from "./tickets-server"
+import { fallbackTicketsData } from "./tickets-server-client"
 
 interface TicketsKanbanProps {
   initialTickets?: any[]

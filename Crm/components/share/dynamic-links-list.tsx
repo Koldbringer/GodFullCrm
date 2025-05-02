@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate, formatRelativeTime } from '@/lib/utils';
-import { DynamicLink, deactivateDynamicLink } from '@/lib/services/dynamic-links';
+import { DynamicLink } from '@/lib/services/dynamic-links-client';
 
 interface DynamicLinksListProps {
   links: DynamicLink[];
@@ -68,7 +68,15 @@ export function DynamicLinksList({ links: initialLinks }: DynamicLinksListProps)
 
   const handleDeactivate = async (token: string) => {
     try {
-      await deactivateDynamicLink(token);
+      // Use API endpoint instead of direct function call
+      const response = await fetch(`/api/dynamic-links/${token}/deactivate`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to deactivate link');
+      }
+      
       setLinks(
         links.map((link) =>
           link.token === token ? { ...link, is_active: false } : link

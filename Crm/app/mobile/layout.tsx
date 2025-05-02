@@ -1,15 +1,9 @@
 "use client"
 
-import type { Metadata } from 'next'
 import { Smartphone, Home, ClipboardList, Package, User, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-
-export const metadata: Metadata = {
-  title: 'Wersja Mobilna - HVAC CRM ERP',
-  description: 'Wersja mobilna systemu HVAC CRM ERP',
-}
 
 export default function MobileLayout({
   children,

@@ -6,10 +6,10 @@
 // Load environment variables with fallbacks
 export const SUPABASE_CONFIG = {
   // URL for the Supabase project
-  url: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || 'https://acfyvozuelayjdhmdtky.supabase.co',
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
 
   // Anonymous key for the Supabase project
-  anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjZnl2b3p1ZWxheWpkaG1kdGt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUwMDQwNTcsImV4cCI6MjA2MDU4MDA1N30.G3S7w0L4pFXDBUtwxBz660MfG0PJt1Esyb2GZf1l_bw',
+  anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY,
 
   // Whether authentication is disabled
   disableAuth: (process.env.NEXT_PUBLIC_DISABLE_SUPABASE_AUTH === 'true' || process.env.DISABLE_SUPABASE_AUTH === 'true'),
